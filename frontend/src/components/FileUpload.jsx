@@ -65,10 +65,16 @@ export default function FileUpload({ onUploadComplete, onError }) {
       const formData = new FormData()
       formData.append('file', file)
 
-      // Get the domain for API calls
-      const apiUrl = window.location.hostname === 'localhost' 
-        ? 'http://localhost:8000'
-        : window.location.origin.replace(':5000', ':8000')
+      // Get the domain for API calls - handle Replit environment
+      let apiUrl
+      if (window.location.hostname === 'localhost') {
+        apiUrl = 'http://localhost:8000'
+      } else {
+        // In Replit iframe, use the current origin but point to backend port
+        const protocol = window.location.protocol
+        const host = window.location.hostname
+        apiUrl = `${protocol}//${host}:8000`
+      }
 
       const response = await axios.post(`${apiUrl}/api/upload`, formData, {
         headers: {
