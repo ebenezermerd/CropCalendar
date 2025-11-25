@@ -138,7 +138,7 @@ export const exportToExcelWithColumns = async (
 
 /**
  * Helper function to capture entire scrollable table
- * Removes overflow clipping to ensure all text is captured and visible
+ * Increases cell heights during capture to ensure text renders fully without clipping
  */
 const captureFullTable = async (elementId, scale = 2) => {
   const container = document.getElementById(elementId)
@@ -155,28 +155,63 @@ const captureFullTable = async (elementId, scale = 2) => {
   const originalScrollLeft = container.scrollLeft
   const originalScrollTop = container.scrollTop
 
-  // Store original overflow styles for all divs
-  const allDivs = innerContainer.querySelectorAll('div')
-  const originalOverflows = new Map()
+  // Store original styles for all relevant elements
+  const elementStyles = new Map()
 
   try {
-    // Step 1: Remove overflow clipping and fix text positioning issues
+    // Step 1: Increase cell heights and remove overflow clipping
+    // This gives text room to render without being cut off
+    const allElements = innerContainer.querySelectorAll('[style*="height"]')
+    const allDivs = innerContainer.querySelectorAll('div')
+    
     allDivs.forEach(div => {
-      const original = div.style.overflow
-      originalOverflows.set(div, original)
+      const styles = {
+        overflow: div.style.overflow,
+        height: div.style.height,
+        lineHeight: div.style.lineHeight,
+        minHeight: div.style.minHeight
+      }
+      elementStyles.set(div, styles)
+      
+      // Remove overflow clipping
       div.style.overflow = 'visible'
       
-      // Fix flex alignment: ensure text doesn't get vertically squeezed
+      // Fix flex alignment
       div.style.alignItems = 'center'
       div.style.justifyContent = 'flex-start'
       
-      // Ensure proper line height for text
-      if (div.style.height && div.style.height.includes('px')) {
-        div.style.lineHeight = '1.2'
+      // Set proper line height for all text
+      div.style.lineHeight = '1.4'
+      
+      // Increase cell heights: 50px headers → 70px, 60px rows → 85px
+      if (div.style.height) {
+        if (div.style.height === '50px') {
+          div.style.height = '70px'
+        } else if (div.style.height === '60px') {
+          div.style.height = '85px'
+          div.style.minHeight = '85px'
+        }
       }
     })
 
-    // Step 2: Get dimensions with overflow visible
+    // Fix spans for better text rendering
+    allDivs.forEach(div => {
+      const spans = div.querySelectorAll('span')
+      spans.forEach(span => {
+        const spanStyles = {
+          display: span.style.display,
+          lineHeight: span.style.lineHeight,
+          verticalAlign: span.style.verticalAlign
+        }
+        elementStyles.set(span, spanStyles)
+        
+        span.style.display = 'inline'
+        span.style.lineHeight = 'normal'
+        span.style.verticalAlign = 'middle'
+      })
+    })
+
+    // Step 2: Get dimensions
     await new Promise(resolve => setTimeout(resolve, 50))
     const fullWidth = innerContainer.scrollWidth || innerContainer.offsetWidth
     const fullHeight = innerContainer.scrollHeight || innerContainer.offsetHeight
@@ -202,28 +237,34 @@ const captureFullTable = async (elementId, scale = 2) => {
     wrapper.style.overflow = 'visible'
     wrapper.style.zIndex = '-9999'
 
-    // Clone the table with overflow visible and fixed alignment
+    // Clone the modified table
     const clone = innerContainer.cloneNode(true)
     clone.querySelectorAll('div').forEach(div => {
       div.style.overflow = 'visible'
       div.style.alignItems = 'center'
       div.style.justifyContent = 'flex-start'
-      if (div.style.height && div.style.height.includes('px')) {
-        div.style.lineHeight = '1.2'
+      div.style.lineHeight = '1.4'
+      
+      // Apply increased heights to clone
+      if (div.style.height === '50px') {
+        div.style.height = '70px'
+      } else if (div.style.height === '60px') {
+        div.style.height = '85px'
+        div.style.minHeight = '85px'
       }
       
-      // Fix spans and text nodes to prevent clipping
+      // Fix spans in clone
       const spans = div.querySelectorAll('span')
       spans.forEach(span => {
-        span.style.display = 'inline-block'
-        span.style.lineHeight = '1.4'
+        span.style.display = 'inline'
+        span.style.lineHeight = 'normal'
         span.style.verticalAlign = 'middle'
       })
     })
     wrapper.appendChild(clone)
     document.body.appendChild(wrapper)
 
-    // Step 6: Capture at display resolution
+    // Step 6: Capture with increased cell heights
     const canvas = await html2canvas(wrapper, {
       scale,
       backgroundColor: '#ffffff',
@@ -243,20 +284,19 @@ const captureFullTable = async (elementId, scale = 2) => {
     return canvas
   } finally {
     // Restore original styles
-    allDivs.forEach(div => {
-      const original = originalOverflows.get(div)
-      div.style.overflow = original || ''
-      // Reset alignment and line-height
-      div.style.alignItems = ''
-      div.style.justifyContent = ''
-      div.style.lineHeight = ''
-      
-      // Reset spans
-      div.querySelectorAll('span').forEach(span => {
-        span.style.display = ''
-        span.style.lineHeight = ''
-        span.style.verticalAlign = ''
-      })
+    elementStyles.forEach((styles, element) => {
+      if (element instanceof HTMLSpanElement) {
+        element.style.display = styles.display
+        element.style.lineHeight = styles.lineHeight
+        element.style.verticalAlign = styles.verticalAlign
+      } else {
+        element.style.overflow = styles.overflow
+        element.style.height = styles.height
+        element.style.lineHeight = styles.lineHeight
+        element.style.minHeight = styles.minHeight
+        element.style.alignItems = ''
+        element.style.justifyContent = ''
+      }
     })
 
     // Restore container styles
