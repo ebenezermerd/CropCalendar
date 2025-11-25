@@ -282,7 +282,7 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
               ganttElementId="gantt-table-container"
               groupingColumns={groupingColumnArray}
               filterColumn={filterColumn}
-              groupedData={groupedByKey}
+              groupedData={groupedRecords}
               dynamicMonthCount={dynamicMonthCount}
               columnWidth={columnWidth}
             />
