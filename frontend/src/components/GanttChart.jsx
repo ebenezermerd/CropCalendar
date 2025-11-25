@@ -101,8 +101,10 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
   const [hoveredRow, setHoveredRow] = useState(null)
   const [sortByCropProcess, setSortByCropProcess] = useState(null)
   const [columnWidth, setColumnWidth] = useState(60)
+  const [fieldColumnWidth, setFieldColumnWidth] = useState(140)
   const [isResizing, setIsResizing] = useState(false)
   const [resizeStart, setResizeStart] = useState(0)
+  const [resizingType, setResizingType] = useState(null) // 'month' or 'field'
 
   const records = filterResults?.records || []
   const filterColumn = filterResults?.filter?.column
@@ -169,24 +171,33 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
   )
 
   const cellHeight = 60
-  const fieldColumnWidth = 140
 
-  const handleMouseDown = (e) => {
+  const handleMouseDown = (e, type = 'month') => {
     setIsResizing(true)
     setResizeStart(e.clientX)
+    setResizingType(type)
   }
 
   const handleMouseMove = (e) => {
-    if (!isResizing) return
+    if (!isResizing || !resizingType) return
     
     const diff = e.clientX - resizeStart
-    const newWidth = Math.max(30, columnWidth + diff)
-    setColumnWidth(newWidth)
+    const minWidth = 30
+    
+    if (resizingType === 'month') {
+      const newWidth = Math.max(minWidth, columnWidth + diff)
+      setColumnWidth(newWidth)
+    } else if (resizingType === 'field') {
+      const newWidth = Math.max(minWidth, fieldColumnWidth + diff)
+      setFieldColumnWidth(newWidth)
+    }
+    
     setResizeStart(e.clientX)
   }
 
   const handleMouseUp = () => {
     setIsResizing(false)
+    setResizingType(null)
   }
 
   React.useEffect(() => {
@@ -199,7 +210,7 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
         document.removeEventListener('mouseup', handleMouseUp)
       }
     }
-  }, [isResizing, columnWidth, resizeStart])
+  }, [isResizing, columnWidth, fieldColumnWidth, resizeStart, resizingType])
 
   const handleSaveEdit = (groupKey, rowIdx) => {
     if (editingMask !== null) {
@@ -289,6 +300,7 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
                 {idx < groupingColumnArray.length - 1 && (
                   <div
                     className="absolute right-0 top-0 bottom-0 w-1 bg-gray-300 hover:bg-blue-500 cursor-col-resize group-hover:bg-blue-500 transition"
+                    onMouseDown={(e) => handleMouseDown(e, 'field')}
                   ></div>
                 )}
               </div>
