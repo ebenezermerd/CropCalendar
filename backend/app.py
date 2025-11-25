@@ -392,6 +392,142 @@ def redetect_columns(upload_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/upload/{upload_id}/column-mapping")
+def get_column_mapping_ui(upload_id: str, rows: int = 20):
+    """
+    Get data for column mapping UI with auto-detected types and confidence scores.
+    
+    Returns:
+    {
+        "columns": [
+            {
+                "name": "Crop",
+                "detected_type": "crop_name",
+                "confidence": 0.95,
+                "sample_values": ["Wheat", "Corn", "Rice"]
+            },
+            ...
+        ],
+        "preview_rows": [first 20 rows of data],
+        "total_rows": 1000
+    }
+    """
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        c.execute("SELECT path, columns_json, total_rows FROM uploads WHERE upload_id = ?", (upload_id,))
+        row = c.fetchone()
+        conn.close()
+        
+        if not row:
+            raise HTTPException(status_code=404, detail="Upload not found")
+        
+        file_path, columns_json, total_rows = row
+        columns_list = json.loads(columns_json)
+        
+        # Read file
+        df, _ = read_file_to_dataframe(file_path)
+        
+        # Auto-detect with confidence scores
+        column_info = []
+        for col in columns_list:
+            sample_values = get_sample_values(df, col, n=3)
+            
+            # Calculate confidence for each type
+            scores = {}
+            for col_type in COLUMN_KEYWORDS.keys():
+                header_score = score_column_header(col, col_type)
+                scores[col_type] = header_score
+            
+            # Add value-based heuristics
+            sample_text = " ".join(str(v).lower() for v in sample_values if v)
+            month_count = sum(1 for month in MONTH_NAMES.keys() if month in sample_text)
+            if month_count > 0:
+                scores['harvest_calendar'] = min(1.0, scores['harvest_calendar'] + 0.3)
+            
+            if re.search(r'\d+\s*-\s*\d+', sample_text):
+                scores['harvest_calendar'] = min(1.0, scores['harvest_calendar'] + 0.2)
+                scores['start_date'] = min(1.0, scores['start_date'] + 0.15)
+                scores['end_date'] = min(1.0, scores['end_date'] + 0.15)
+            
+            detected_type = max(scores, key=scores.get) if scores else None
+            confidence = round(max(scores.values()) if scores else 0.0, 2)
+            
+            column_info.append({
+                "name": col,
+                "detected_type": detected_type if confidence > 0.3 else None,
+                "confidence": confidence,
+                "sample_values": sample_values
+            })
+        
+        # Get preview rows
+        preview_df = df.head(min(rows, len(df)))
+        preview_rows = preview_df.fillna("").to_dict('records')
+        
+        return {
+            "columns": column_info,
+            "preview_rows": preview_rows,
+            "total_rows": total_rows,
+            "available_types": list(COLUMN_KEYWORDS.keys()) + ["ignore"]
+        }
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/upload/{upload_id}/save-mappings")
+def save_column_mappings(upload_id: str, mappings: Dict[str, str]):
+    """
+    Save user-configured column mappings.
+    
+    Request body:
+    {
+        "Crop": "crop_name",
+        "Country": "country",
+        "Sowing_Month": "start_date",
+        "Harvest_Month": "end_date",
+        "Unknown_Column": "ignore"
+    }
+    
+    Returns saved mappings and ready status.
+    """
+    try:
+        # Validate mappings
+        valid_types = set(COLUMN_KEYWORDS.keys()) | {"ignore"}
+        for col, col_type in mappings.items():
+            if col_type not in valid_types:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Invalid column type '{col_type}'. Must be one of: {', '.join(valid_types)}"
+                )
+        
+        # Store mappings in database
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        
+        # Check if upload exists
+        c.execute("SELECT upload_id FROM uploads WHERE upload_id = ?", (upload_id,))
+        if not c.fetchone():
+            conn.close()
+            raise HTTPException(status_code=404, detail="Upload not found")
+        
+        # Update uploads table with column mappings
+        c.execute("""UPDATE uploads SET columns_json = ? WHERE upload_id = ?""",
+                 (json.dumps(mappings), upload_id))
+        conn.commit()
+        conn.close()
+        
+        return {
+            "success": True,
+            "upload_id": upload_id,
+            "mappings": mappings,
+            "message": "Column mappings saved successfully"
+        }
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 if __name__ == "__main__":
     import uvicorn

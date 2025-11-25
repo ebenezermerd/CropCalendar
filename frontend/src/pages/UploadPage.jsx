@@ -3,7 +3,7 @@ import FileUpload from '../components/FileUpload'
 import UploadStatus from '../components/UploadStatus'
 import PreviewTable from '../components/PreviewTable'
 
-export default function UploadPage({ onUploadComplete }) {
+export default function UploadPage({ onUploadComplete, onColumnMappingStart }) {
   const [uploadData, setUploadData] = useState(null)
   const [error, setError] = useState(null)
   const [showPreview, setShowPreview] = useState(false)
@@ -25,6 +25,12 @@ export default function UploadPage({ onUploadComplete }) {
     setUploadData(null)
     setError(null)
     setShowPreview(false)
+  }
+
+  const handleNext = () => {
+    if (uploadData) {
+      onColumnMappingStart(uploadData)
+    }
   }
 
   return (
@@ -118,7 +124,10 @@ export default function UploadPage({ onUploadComplete }) {
                   Click "Next" to continue with column mapping and parsing
                 </li>
               </ol>
-              <button className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium">
+              <button 
+                onClick={handleNext}
+                className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+              >
                 Next: Configure Columns
               </button>
             </div>
