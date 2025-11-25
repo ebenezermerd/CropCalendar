@@ -3,6 +3,7 @@ import UploadPage from './pages/UploadPage'
 import ColumnMapping from './components/ColumnMapping'
 import ParsingResults from './components/ParsingResults'
 import GroupSelector from './components/GroupSelector'
+import GanttChart from './components/GanttChart'
 import './App.css'
 
 function App() {
@@ -49,13 +50,17 @@ function App() {
     setCurrentStep('parsing')
   }
 
+  const handleBackFromGantt = () => {
+    setCurrentStep('filtering')
+  }
+
   const handleFilterApply = (filterResults) => {
     // Filter applied successfully
     setUploadData(prev => ({
       ...prev,
       filter_results: filterResults
     }))
-    // TODO: Move to visualization/Gantt view
+    setCurrentStep('gantt')
   }
 
   return (
@@ -95,6 +100,16 @@ function App() {
               uploadId={uploadData.upload_id}
               onFilterApply={handleFilterApply}
               onBack={handleBackFromFiltering}
+            />
+          </div>
+        </div>
+      )}
+      {currentStep === 'gantt' && uploadData?.filter_results && (
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+          <div className="max-w-full mx-auto px-4 py-12">
+            <GanttChart
+              filterResults={uploadData.filter_results}
+              onBack={handleBackFromGantt}
             />
           </div>
         </div>
