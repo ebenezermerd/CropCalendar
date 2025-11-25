@@ -183,13 +183,13 @@ const captureFullTable = async (elementId, scale = 2) => {
       // Set proper line height for all text
       div.style.lineHeight = '1.4'
       
-      // Increase cell heights: 50px headers → 70px, 60px rows → 85px
+      // Increase cell heights slightly: 50px headers → 55px, 60px rows → 70px
       if (div.style.height) {
         if (div.style.height === '50px') {
-          div.style.height = '70px'
+          div.style.height = '55px'
         } else if (div.style.height === '60px') {
-          div.style.height = '85px'
-          div.style.minHeight = '85px'
+          div.style.height = '70px'
+          div.style.minHeight = '70px'
         }
       }
     })
@@ -257,10 +257,10 @@ const captureFullTable = async (elementId, scale = 2) => {
       
       // Apply increased heights to clone
       if (div.style.height === '50px') {
-        div.style.height = '70px'
+        div.style.height = '55px'
       } else if (div.style.height === '60px') {
-        div.style.height = '85px'
-        div.style.minHeight = '85px'
+        div.style.height = '70px'
+        div.style.minHeight = '70px'
       }
       
       // Fix spans in clone - CRITICAL: remove ALL clipping
