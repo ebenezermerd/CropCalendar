@@ -36,9 +36,9 @@ function extractMonthRanges(mask) {
       
       ranges.push({ start: rangeStart, end: 11, wrapped: true })
       
-      if (janEnd > 0) {
-        ranges.push({ start: 0, end: janEnd, isWrapped: true })
-      }
+      // Always add the isWrapped range if we detected a wrap (bit 0 is set)
+      // This handles cases like Oct-Jan (janEnd=0) and Oct-Mar (janEnd=2)
+      ranges.push({ start: 0, end: janEnd, isWrapped: true })
     } else {
       ranges.push({ start: rangeStart, end: 11 })
     }
