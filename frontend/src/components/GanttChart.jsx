@@ -67,22 +67,31 @@ function getColorForGroup(index) {
 
 // Calculate the maximum month span needed across all records
 function calculateMaxMonthSpan(records) {
-  // Check if ANY record has a year-wrapping period (wrapped flag)
-  let hasYearWrapping = false
+  let maxMonthsNeeded = 12  // At minimum, show 12 months
   
   records.forEach(record => {
     if (record.month_mask) {
       const ranges = extractMonthRanges(record.month_mask)
-      // If any range is marked as wrapped, we need 24 months
-      if (ranges.some(range => range.wrapped || range.isWrapped)) {
-        hasYearWrapping = true
-      }
+      
+      // Check each range to find the maximum span
+      ranges.forEach(range => {
+        if (range.wrapped && !range.isWrapped) {
+          // This range wraps to next year. Find its paired isWrapped range
+          const wrappedPair = ranges.find(r => r.isWrapped)
+          if (wrappedPair) {
+            // Range: e.g., Oct(9) to Dec(11) wrapped to Jan(0) to Mar(2)
+            // Months needed in 24-month system: 
+            // From month 9 to month 12+2 = need 15 slots (0-14)
+            const monthsSpanned = 12 + wrappedPair.end + 1
+            maxMonthsNeeded = Math.max(maxMonthsNeeded, monthsSpanned)
+          }
+        }
+      })
     }
   })
   
-  // If ANY record spans across year boundary, show full 24 months (Year 1 + Year 2)
-  // Otherwise show just 12 months
-  return hasYearWrapping ? 24 : 12
+  // Minimum 12 months, maximum 24
+  return Math.min(maxMonthsNeeded, 24)
 }
 
 export default function GanttChart({ filterResults, groupingColumns, onBack }) {
