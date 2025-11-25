@@ -545,11 +545,47 @@ def save_column_mappings(upload_id: str, mappings: Dict[str, str]):
 
 # ==================== PARSING & NORMALIZATION ====================
 
-def parse_month_string(value: str) -> Tuple[int, bool, str]:
+def extract_month_from_date(date_str: str) -> Optional[int]:
     """
-    Parse month/season string and return (month_mask, requires_review, parsed_months).
+    Extract month number from a date string.
+    Handles: MM/DD/YYYY, DD-MM-YY, MM-DD-YYYY, etc.
+    Returns month number (1-12) or None if can't parse
+    """
+    if not date_str or pd.isna(date_str):
+        return None
     
-    Handles: Jan-Mar, Mar-May, 3-5, January, Mar, May, All year, etc.
+    date_str = str(date_str).strip()
+    
+    # Try parsing with common date formats
+    for fmt in ['%m/%d/%Y', '%m/%d/%y', '%d-%m-%y', '%d-%m-%Y', '%m-%d-%Y', '%m-%d-%y', 
+                '%d/%m/%Y', '%d/%m/%y', '%Y-%m-%d', '%d.%m.%Y', '%d.%m.%y']:
+        try:
+            parsed_date = datetime.strptime(date_str, fmt)
+            return parsed_date.month
+        except:
+            continue
+    
+    # If date parsing fails, try to extract just the month
+    # Look for MM in MM/DD or MM-DD patterns
+    month_match = re.search(r'^(\d{1,2})(?:[/-]|$)', date_str)
+    if month_match:
+        try:
+            month = int(month_match.group(1))
+            if 1 <= month <= 12:
+                return month
+        except:
+            pass
+    
+    return None
+
+def parse_month_string(value: str, start_date: Optional[str] = None, end_date: Optional[str] = None) -> Tuple[int, bool, str]:
+    """
+    Parse month/season information and return (month_mask, requires_review, parsed_months).
+    
+    Priority:
+    1. If start_date and end_date are provided, use them for precise month extraction
+    2. Otherwise parse the period/value string (Jan-Mar, 3-5, All year, etc.)
+    
     month_mask: 12-bit integer where bit i=1 means month i is active
     """
     if not value or pd.isna(value):
@@ -557,35 +593,86 @@ def parse_month_string(value: str) -> Tuple[int, bool, str]:
     
     value = str(value).strip().lower()
     
-    # Check for "all year" / perennial indicators
-    if any(x in value for x in ['all year', 'allyear', 'year round', 'year-round', 'perennial', '12', 'permanent']):
+    # PRIORITY 1: Use actual start_date and end_date if available
+    if start_date and end_date:
+        start_month = extract_month_from_date(start_date)
+        end_month = extract_month_from_date(end_date)
+        
+        if start_month and end_month:
+            month_mask = 0
+            parsed_months = []
+            
+            # Handle wraparound (e.g., Oct-Feb crossing year boundary)
+            if start_month <= end_month:
+                for m in range(start_month, end_month + 1):
+                    month_mask |= (1 << (m - 1))
+                    parsed_months.append(m)
+            else:
+                # Wraparound (e.g., Oct=10 to Feb=2)
+                for m in range(start_month, 13):
+                    month_mask |= (1 << (m - 1))
+                    parsed_months.append(m)
+                for m in range(1, end_month + 1):
+                    month_mask |= (1 << (m - 1))
+                    parsed_months.append(m)
+            
+            # Generate month names string
+            month_names_list = []
+            for m in sorted(set(parsed_months)):
+                for name, num in MONTH_NAMES.items():
+                    if num == m and len(name) >= 3:
+                        month_names_list.append(name.capitalize())
+                        break
+            parsed_months_str = ", ".join(month_names_list)
+            
+            return month_mask, False, parsed_months_str
+    
+    # PRIORITY 2: Parse the period string
+    # Check for "all year" / perennial indicators (but NOT just "12")
+    if any(x in value for x in ['all year', 'allyear', 'year round', 'year-round', 'perennial', 'permanent', 'annual crop']):
         return 4095, False, "all year"  # 111111111111 in binary
     
     month_mask = 0
     requires_review = False
     parsed_months = []
     
-    # Try range patterns (e.g., "Jan - Mar", "3-5", "January to February")
-    range_patterns = [
-        (r'(\w+)\s*(?:to|-|through)\s*(\w+)', 'range'),
-        (r'(\d+)\s*(?:to|-|through)\s*(\d+)', 'range_num'),
+    # Try range patterns with dates (e.g., "Jan 01 to Feb 28", "Mar 15 - Apr 15")
+    # This pattern handles month names even when followed by dates
+    date_range_patterns = [
+        r'([a-z]{3,})\s+\d+\s*(?:to|-|through)\s*([a-z]{3,})\s+\d+',  # "Jan 01 to Feb 28"
+        r'([a-z]{3,})\s*(?:to|-|through)\s*([a-z]{3,})',  # "Jan to Feb"
+        r'(\d+)\s*(?:to|-|through)\s*(\d+)',  # "3 to 5"
     ]
     
-    for pattern, ptype in range_patterns:
+    for pattern in date_range_patterns:
         match = re.search(pattern, value, re.IGNORECASE)
         if match:
             start_str, end_str = match.groups()
             
-            # Convert to month numbers
-            if ptype == 'range_num':
+            # Try to convert to month numbers
+            start_month = None
+            end_month = None
+            
+            # Check if they're month names
+            start_month = MONTH_NAMES.get(start_str.lower()[:3], None)
+            end_month = MONTH_NAMES.get(end_str.lower()[:3], None)
+            
+            # If not month names, try numeric
+            if not start_month:
                 try:
                     start_month = int(start_str)
-                    end_month = int(end_str)
+                    if start_month > 12:
+                        start_month = None
                 except:
-                    continue
-            else:
-                start_month = MONTH_NAMES.get(start_str.lower()[:3], None)
-                end_month = MONTH_NAMES.get(end_str.lower()[:3], None)
+                    pass
+            
+            if not end_month:
+                try:
+                    end_month = int(end_str)
+                    if end_month > 12:
+                        end_month = None
+                except:
+                    pass
             
             if start_month and end_month:
                 # Handle wraparound (e.g., Oct-Feb)
@@ -595,7 +682,7 @@ def parse_month_string(value: str) -> Tuple[int, bool, str]:
                         if m not in parsed_months:
                             parsed_months.append(m)
                 else:
-                    # Wraparound (e.g., Oct=10 to Feb=2)
+                    # Wraparound
                     for m in range(start_month, 13):
                         month_mask |= (1 << (m - 1))
                         if m not in parsed_months:
@@ -608,24 +695,13 @@ def parse_month_string(value: str) -> Tuple[int, bool, str]:
     
     # Try individual month patterns (e.g., "Jan", "May", "Aug")
     if month_mask == 0:
-        individual_months = re.findall(r'\b(\w{3,})\b', value)
+        individual_months = re.findall(r'\b([a-z]{3,})\b', value)
         for month_str in individual_months:
             month_num = MONTH_NAMES.get(month_str.lower()[:3], None)
             if month_num:
                 month_mask |= (1 << (month_num - 1))
                 if month_num not in parsed_months:
                     parsed_months.append(month_num)
-    
-    # Try numeric month patterns (e.g., "1,3,5" or "2, 4, 6")
-    if month_mask == 0:
-        numeric_matches = re.findall(r'\b(\d{1,2})\b', value)
-        valid_months = []
-        for match in numeric_matches:
-            month_num = int(match)
-            if 1 <= month_num <= 12:
-                month_mask |= (1 << (month_num - 1))
-                valid_months.append(month_num)
-        parsed_months = sorted(valid_months)
     
     # Generate month names string
     if parsed_months:
@@ -686,6 +762,19 @@ def parse_and_normalize_data(upload_id: str):
                 requires_review = False
                 review_reason = None
                 
+                # Find start_date and end_date columns if they exist
+                start_date_col = None
+                end_date_col = None
+                harvest_calendar_col = None
+                
+                for col_name, col_type in mappings.items():
+                    if col_type == 'start_date':
+                        start_date_col = col_name
+                    elif col_type == 'end_date':
+                        end_date_col = col_name
+                    elif col_type == 'harvest_calendar':
+                        harvest_calendar_col = col_name
+                
                 for col_name, col_type in mappings.items():
                     if col_type == 'ignore':
                         continue
@@ -694,14 +783,23 @@ def parse_and_normalize_data(upload_id: str):
                     
                     # Handle specific types
                     if col_type == 'harvest_calendar':
-                        month_mask, needs_review, parsed_months = parse_month_string(value)
+                        # Try to use start_date and end_date for more accurate parsing
+                        start_date = None
+                        end_date = None
+                        
+                        if start_date_col:
+                            start_date = raw_row.get(start_date_col)
+                        if end_date_col:
+                            end_date = raw_row.get(end_date_col)
+                        
+                        month_mask, needs_review, parsed_months = parse_month_string(value, start_date, end_date)
                         normalized['month_mask'] = month_mask
                         normalized['parsed_months'] = parsed_months
                         if needs_review:
                             requires_review = True
                             review_reason = f"Could not parse: {value}"
                     
-                    else:
+                    elif col_type not in ['start_date', 'end_date']:  # Skip storing raw date columns
                         normalized[col_type] = str(value) if pd.notna(value) else None
                 
                 # Store record
