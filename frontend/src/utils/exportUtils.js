@@ -138,7 +138,7 @@ export const exportToExcelWithColumns = async (
 
 /**
  * Helper function to capture entire scrollable table
- * Expands cell heights temporarily to ensure all text is captured properly
+ * Removes overflow clipping to ensure all text is captured and visible
  */
 const captureFullTable = async (elementId, scale = 2) => {
   const container = document.getElementById(elementId)
@@ -155,28 +155,22 @@ const captureFullTable = async (elementId, scale = 2) => {
   const originalScrollLeft = container.scrollLeft
   const originalScrollTop = container.scrollTop
 
-  // Store original div styles - we'll modify them for export
+  // Store original overflow styles for all divs
   const allDivs = innerContainer.querySelectorAll('div')
-  const originalStyles = new Map()
-  
+  const originalOverflows = new Map()
+
   try {
-    // Step 1: Expand all divs to auto height to show all text
+    // Step 1: Remove overflow clipping from all divs to allow text to render
     allDivs.forEach(div => {
-      const originalHeight = div.style.height
-      const originalMinHeight = div.style.minHeight
-      originalStyles.set(div, { height: originalHeight, minHeight: originalMinHeight })
-      
-      // Only modify height if it's currently set to a fixed value (like 50px or 60px)
-      if (originalHeight && originalHeight.includes('px')) {
-        div.style.height = 'auto'
-        div.style.minHeight = 'auto'
-      }
+      const original = div.style.overflow
+      originalOverflows.set(div, original)
+      div.style.overflow = 'visible'
     })
 
-    // Step 2: Get full dimensions after expansion
+    // Step 2: Get dimensions with overflow visible
     await new Promise(resolve => setTimeout(resolve, 50))
-    const fullWidth = innerContainer.offsetWidth
-    const fullHeight = innerContainer.offsetHeight
+    const fullWidth = innerContainer.scrollWidth || innerContainer.offsetWidth
+    const fullHeight = innerContainer.scrollHeight || innerContainer.offsetHeight
 
     // Step 3: Prepare container for capture
     container.style.overflow = 'visible'
@@ -185,10 +179,10 @@ const captureFullTable = async (elementId, scale = 2) => {
     container.scrollLeft = 0
     container.scrollTop = 0
 
-    // Step 4: Force browser to recalculate layout
+    // Step 4: Wait for layout to settle
     await new Promise(resolve => setTimeout(resolve, 50))
 
-    // Step 5: Create wrapper and clone for capturing
+    // Step 5: Create wrapper for clean capture
     const wrapper = document.createElement('div')
     wrapper.style.position = 'fixed'
     wrapper.style.left = '-9999px'
@@ -196,15 +190,18 @@ const captureFullTable = async (elementId, scale = 2) => {
     wrapper.style.width = fullWidth + 'px'
     wrapper.style.height = fullHeight + 'px'
     wrapper.style.backgroundColor = '#ffffff'
-    wrapper.style.overflow = 'hidden'
+    wrapper.style.overflow = 'visible'
     wrapper.style.zIndex = '-9999'
 
-    // Clone the expanded inner container
+    // Clone the table with overflow visible
     const clone = innerContainer.cloneNode(true)
+    clone.querySelectorAll('div').forEach(div => {
+      div.style.overflow = 'visible'
+    })
     wrapper.appendChild(clone)
     document.body.appendChild(wrapper)
 
-    // Step 6: Capture with expanded cell heights
+    // Step 6: Capture at display resolution
     const canvas = await html2canvas(wrapper, {
       scale,
       backgroundColor: '#ffffff',
@@ -213,7 +210,9 @@ const captureFullTable = async (elementId, scale = 2) => {
       allowTaint: true,
       imageTimeout: 0,
       windowWidth: fullWidth,
-      windowHeight: fullHeight
+      windowHeight: fullHeight,
+      width: fullWidth,
+      height: fullHeight
     })
 
     // Clean up
@@ -221,15 +220,13 @@ const captureFullTable = async (elementId, scale = 2) => {
 
     return canvas
   } finally {
-    // Restore original state
+    // Restore original overflow styles
     allDivs.forEach(div => {
-      const original = originalStyles.get(div)
-      if (original) {
-        div.style.height = original.height
-        div.style.minHeight = original.minHeight
-      }
+      const original = originalOverflows.get(div)
+      div.style.overflow = original || ''
     })
 
+    // Restore container styles
     container.style.overflow = originalOverflow
     container.style.width = originalWidth
     container.style.height = originalHeight
