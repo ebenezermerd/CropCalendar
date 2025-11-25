@@ -327,8 +327,8 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
               return (
                 <div
                   key={`month-${cellIdx}`}
-                  className="text-center font-semibold text-gray-700 text-xs border-r border-gray-300 bg-gray-100 flex items-center justify-center relative group select-none"
-                  style={{ width: columnWidth, height: 50, minWidth: columnWidth }}
+                  className="text-center font-semibold text-gray-700 text-xs bg-gray-100 flex items-center justify-center relative group select-none"
+                  style={{ width: columnWidth, height: 50, minWidth: columnWidth, borderRight: '2px solid #d1d5db' }}
                 >
                   {label}
                   {cellIdx < dynamicMonthCount - 1 && (
@@ -388,8 +388,8 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
                       {Array.from({ length: dynamicMonthCount }).map((_, i) => (
                         <div
                           key={i}
-                          className="flex-1 border-r border-gray-100"
-                          style={{ width: columnWidth }}
+                          className="flex-1"
+                          style={{ width: columnWidth, borderRight: '2px solid #e5e7eb' }}
                         ></div>
                       ))}
                     </div>

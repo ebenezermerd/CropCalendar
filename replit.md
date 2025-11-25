@@ -28,6 +28,7 @@ The application follows a client-server architecture.
     - **Date range tooltips**: Hover shows actual dates (e.g., "Jan 02 - Feb 26")
     - **Inline editing**: Click bars to edit month masks
     - **Proper text rendering**: Field columns now display text with correct line heights and no clipping
+    - **Professional column dividers**: 2px solid borders on month columns matching field column styling for visual consistency
 
 - **Advanced Export Functionality - 6 Formats**:
     - **📊 Excel**: Professional table export with multi-select column chooser (all columns selectable by default)
@@ -37,6 +38,14 @@ The application follows a client-server architecture.
     - **📋 JSON**: Complete data export with metadata and grouping information
     - **📦 LZL**: Portable ZIP package with metadata, data, and full-resolution preview
     - **Quality/Resolution Options**: High (2x scale) or Normal (1x scale) for images/PDF
+
+- **Loading Animations**: Professional spinning loader component used throughout the app for:
+    - File upload progress
+    - Column mapping loading/saving
+    - Data parsing
+    - Filtering operations
+    - Export operations (modal overlay)
+    - All async operations providing clear user feedback
 
 ### External Dependencies
 - **Frontend**:
@@ -56,53 +65,54 @@ The application follows a client-server architecture.
     - `Openpyxl`: Library for reading/writing Excel files.
     - `SQLModel`: Library for interacting with SQL databases.
 
-### Recent Changes (Current Session - Text Rendering & Export Fixes)
-**Session 6 - Text Rendering & Export Capture Fixes:**
+### Recent Changes (Current Session - UX Improvements & Loading Animations)
+**Session 7 - Column Dividers & Loading Animations:**
 
-**Critical Fixes Implemented:**
-- **Text Clipping Issue - RESOLVED**:
-  - ✅ Fixed truncated text in field columns (both live display and exports)
-  - ✅ Replaced Tailwind `truncate` class with explicit `whitespace-nowrap overflow-hidden text-ellipsis`
-  - ✅ Added proper `lineHeight: 1.4` to prevent vertical squeezing
-  - ✅ Added `min-w-0` to flex containers for proper text sizing
-  - ✅ Text now displays fully without clipping at top or bottom
-  - ✅ Badge and text render together without vertical compression
+**Major UX Improvements Implemented:**
 
-- **Export Capture Improvements**:
-  - ✅ Enhanced capture function to remove overflow clipping during export
-  - ✅ Fixed flex alignment to ensure text renders at proper baseline
-  - ✅ Implemented span inline-block rendering with vertical alignment
-  - ✅ Added line-height corrections for proper text rendering
-  - ✅ All styles automatically restored after capture (non-destructive)
+1. **Professional Column Dividers - Enhanced**:
+   - ✅ Month column headers now have 2px solid borders (instead of 1px thin)
+   - ✅ Month data rows have matching 2px solid borders for visual hierarchy
+   - ✅ Creates clear visual separation between months, similar to field column dividers
+   - ✅ Improves table scanability and professional appearance
 
-- **Export Dialog Enhancements**:
-  - ✅ Dropdown format selector (single choice - cleaner UX)
-  - ✅ Format-specific options appear conditionally
-  - ✅ Color-coded sections for visual clarity
-  - ✅ Helpful tips and descriptions for each format
-  - ✅ Column selection UI for Excel (multi-checkbox with All/None)
+2. **Reusable LoadingSpinner Component - Created**:
+   - ✅ New `LoadingSpinner.jsx` component with three size options (sm, md, lg)
+   - ✅ Customizable message text
+   - ✅ Animated rotating spinner using Tailwind CSS
+   - ✅ Consistent visual styling across entire app
+
+3. **Loading States Integrated Throughout**:
+   - ✅ **File Upload**: Shows LoadingSpinner with progress bar during upload
+   - ✅ **Column Mapping**: Loading and saving states show LoadingSpinner
+   - ✅ **Data Parsing**: Large spinner during parse operation with "may take a moment" hint
+   - ✅ **Filtering**: Shows loading screen during filter application
+   - ✅ **Export**: Full-screen modal overlay with LoadingSpinner during export
+   - ✅ All loading states provide clear user feedback
 
 **Technical Implementation Details:**
-- **GanttChart.jsx**: Updated field column styling to use explicit text-ellipsis handling
-- **exportUtils.js**: Enhanced `captureFullTable()` with overflow removal and flex alignment fixes
-- **Text Rendering**: Proper line-height and vertical alignment ensures no clipping
-- **Restoration**: All temporary style changes are cleaned up after capture
+- **LoadingSpinner.jsx**: Reusable component with size variants (sm: 8x8, md: 12x12, lg: 16x16)
+- **GanttChart.jsx**: Updated month column headers and data row grids with 2px borders
+- **GroupSelector.jsx**: Integrated LoadingSpinner for initial load and filtering state
+- **ExportPanel.jsx**: Added full-screen loading modal during export with format info
+- **FileUpload.jsx**: Uses LoadingSpinner with progress bar for upload feedback
+- **ColumnMapping.jsx**: Shows LoadingSpinner for load and save states
+- **ParsingResults.jsx**: Large LoadingSpinner with helpful message during parsing
 
 **Previous Session Improvements:**
-- Fixed ghost bar issue in year-wrapping periods (Oct-Jan)
-- Implemented dynamic field column resizing
-- Created initial export dialog with format selection
-- Restructured Gantt from composite labels to dedicated table columns
-- Implemented dynamic month expansion based on data's maximum span
-- Added year wrapping labels (Jan Y+1, Feb Y+1, etc.)
-- Implemented resizable month column functionality
+- Fixed export text clipping by increasing cell heights and removing overflow constraints
+- Replaced `truncate` class with explicit ellipsis handling
+- Implemented precise cell height adjustments for exports (50px→55px headers, 60px→70px rows)
+- Enhanced export capture function with proper text rendering
 
 ### Known Issues & Limitations
 None currently identified - all critical functionality is working as expected.
 
 ### Testing Recommendations
-- ✅ Export PNG/JPG with High resolution - captures full table with all text visible
-- ✅ Export PDF in landscape/portrait modes - multi-page support working
-- ✅ Export Excel with column selection - professional formatting applied
-- ✅ View Gantt chart with various grouping combinations - text displays properly
-- ✅ Resize columns while viewing - layout remains stable
+- ✅ Column dividers appear as 2px solid lines between month columns
+- ✅ Loading spinner appears during file upload with progress bar
+- ✅ Loading spinner appears when loading column mappings
+- ✅ Loading spinner appears during data parsing
+- ✅ Loading spinner appears during filtering
+- ✅ Export modal shows loading spinner during export operations
+- ✅ All loading states provide appropriate user feedback

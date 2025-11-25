@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { toast } from 'sonner'
+import LoadingSpinner from './LoadingSpinner'
 import {
   exportToExcelWithColumns,
   exportTableAsPNG,
@@ -145,6 +146,21 @@ export default function ExportPanel({
     { value: 'json', label: '📋 JSON - Data export', icon: '📋' },
     { value: 'lzl', label: '📦 LZL - Portable package', icon: '📦' }
   ]
+
+  // Show loading modal during export
+  if (isExporting) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 rounded-lg">
+        <div className="bg-white rounded-lg p-8 shadow-2xl">
+          <LoadingSpinner 
+            message={`Exporting as ${selectedFormat.toUpperCase()}...`}
+            size="lg"
+          />
+          <p className="text-center text-gray-500 text-sm mt-4">This may take a moment</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="relative">

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import axios from 'axios'
 import Fuse from 'fuse.js'
 import { Toaster, toast } from 'sonner'
+import LoadingSpinner from './LoadingSpinner'
 
 export default function GroupSelector({ uploadId, onFilterApply, onBack }) {
   const [loading, setLoading] = useState(true)
@@ -149,12 +150,15 @@ export default function GroupSelector({ uploadId, onFilterApply, onBack }) {
   if (loading) {
     return (
       <div className="flex items-center justify-center p-12">
-        <div className="text-center">
-          <div className="mb-4">
-            <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto"></div>
-          </div>
-          <p className="text-gray-600 font-medium">Loading group options...</p>
-        </div>
+        <LoadingSpinner message="Loading group options..." size="md" />
+      </div>
+    )
+  }
+
+  if (filtering) {
+    return (
+      <div className="flex items-center justify-center p-12">
+        <LoadingSpinner message="Filtering data..." size="md" />
       </div>
     )
   }

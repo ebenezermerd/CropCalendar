@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import { Toaster, toast } from 'sonner'
+import LoadingSpinner from './LoadingSpinner'
 
 export default function ParsingResults({ uploadId, onParsingComplete, onBack }) {
   const [loading, setLoading] = useState(false)
@@ -63,11 +64,8 @@ export default function ParsingResults({ uploadId, onParsingComplete, onBack }) 
         <Toaster position="top-right" theme="light" />
         <div className="flex items-center justify-center p-12">
           <div className="text-center">
-            <div className="mb-4">
-              <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto"></div>
-            </div>
-            <p className="text-gray-600 font-medium">Parsing data and generating month masks...</p>
-            <p className="text-sm text-gray-500 mt-2">This may take a moment for large files</p>
+            <LoadingSpinner message="Parsing data and generating month masks..." size="lg" />
+            <p className="text-sm text-gray-500 mt-4">This may take a moment for large files</p>
           </div>
         </div>
       </div>

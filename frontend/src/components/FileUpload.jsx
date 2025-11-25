@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import axios from 'axios'
+import LoadingSpinner from './LoadingSpinner'
 
 export default function FileUpload({ onUploadComplete, onError }) {
   const [isDragging, setIsDragging] = useState(false)
@@ -159,8 +160,7 @@ export default function FileUpload({ onUploadComplete, onError }) {
           </label>
         ) : (
           <div className="flex flex-col items-center justify-center space-y-4">
-            <div className="w-16 h-16 border-4 border-gray-200 border-t-blue-500 rounded-full animate-spin"></div>
-            <p className="text-gray-700 font-medium">Uploading...</p>
+            <LoadingSpinner message="Uploading..." size="lg" />
             <div className="w-full max-w-xs bg-gray-200 rounded-full h-2">
               <div
                 className="bg-blue-500 h-2 rounded-full transition-all duration-300"
