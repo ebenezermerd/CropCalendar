@@ -28,6 +28,15 @@ The application follows a client-server architecture.
     - **Date range tooltips**: Hover shows actual dates (e.g., "Jan 02 - Feb 26")
     - **Inline editing**: Click bars to edit month masks
 
+- **Comprehensive Export Functionality**:
+    - **Smart Format Selection**: Dropdown-based format selector with context-specific options
+    - **Excel Exports**: 4 options (table with formatting, raw data, normalized, by country)
+    - **Image Exports**: PNG/JPG with full table capture and dynamic column width preservation
+    - **PDF Export**: Multi-page support with landscape/portrait orientation, entire table captured
+    - **SVG Export**: Scalable vector format of complete table presentation
+    - **JSON/LZL**: Data export with metadata and grouping information
+    - **Quality/Resolution Options**: Choose between high-quality (2x scale) or normal (1x) rendering
+
 ### External Dependencies
 - **Frontend**:
     - `React`: JavaScript library for building user interfaces.
@@ -36,8 +45,8 @@ The application follows a client-server architecture.
     - `Axios`: Promise-based HTTP client.
     - `Sonner`: Toast notification library.
     - `html2canvas`: Convert DOM to canvas for image export (PNG/JPG/PDF).
-    - `jsPDF`: Generate PDF documents client-side.
-    - `XLSX`: Excel workbook generation and manipulation.
+    - `jsPDF`: Generate PDF documents client-side with multi-page support.
+    - `XLSX`: Excel workbook generation with formatting support.
     - `JSZip`: Create ZIP archives for LZL export format.
 - **Backend**:
     - `FastAPI`: Web framework for building APIs.
@@ -46,22 +55,50 @@ The application follows a client-server architecture.
     - `Openpyxl`: Library for reading/writing Excel files.
     - `SQLModel`: Library for interacting with SQL databases.
 
-### Recent Changes (Latest Session)
-**Session 3 - Bug Fixes & Export Functionality:**
-- Fixed ghost bar issue in year-wrapping periods (Oct-Jan) by filtering duplicate range rendering
-- Implemented dynamic field column resizing (Country, Period, CropProcess columns now resize independently)
-- Added comprehensive export functionality (6 formats + batch export):
-  - **Excel (.xlsx)**: Raw rows, normalized only, or one sheet per country
-  - **PNG/JPG**: Client-side Gantt chart image export
-  - **PDF**: Multi-page support with landscape/portrait orientation
-  - **SVG**: Scalable vector graphics format
-  - **JSON**: Raw data export with metadata
-  - **LZL**: Custom ZIP format containing metadata.json, data.json, preview.png
-  - **Batch Export**: Export multiple groups in single operation
-- Created ExportPanel component with intuitive export menu
-- All exports trigger automatic downloads with timestamp naming
+### Recent Changes (Current Session - Export Redesign)
+**Session 4 - Export Dialog Redesign & Full Table Export Implementation:**
+- **Completely redesigned export dialog**: 
+  - Single format selector dropdown (eliminates list format)
+  - Format-specific options appear only after format selection
+  - Clear explanations for each export format
+  - Improved visual hierarchy with color-coded sections
+  - Shows record count and grouping fields in header
+
+- **Fixed critical export issue - Now exports complete table presentation**:
+  - **Excel (.xlsx)**: 
+    - "Full Table with Formatting" - exports Gantt layout with visual shading and group headers
+    - Raw data, normalized, and by-country options available
+    - Includes header styling and alternating row colors
+  - **PNG/JPG**: 
+    - Captures entire table with all groups and rows (not just visible area)
+    - Respects dynamic column width configuration
+    - High/Normal resolution options (2x or 1x scale)
+  - **PDF**: 
+    - Multi-page support for large tables
+    - Landscape/Portrait orientation selection
+    - Full table capture with professional layout
+  - **SVG/JSON/LZL**: 
+    - SVG: Complete scalable vector export
+    - JSON: Full data with metadata and grouping info
+    - LZL: Portable ZIP with metadata, data, and preview PNG
+
+- **UI/UX Improvements**:
+  - Export button remains consistent green button with dropdown
+  - Format options clearly labeled with emojis for visual recognition
+  - Helpful tips showing how many records will be exported
+  - Quality/resolution options for image formats
+  - All exports use professional naming with timestamps
+
+- **Technical Implementation**:
+  - `exportToExcelAsTable()`: Exports table with visual formatting (colors, shading, group headers)
+  - `exportTableAsPNG/JPG/PDF()`: New functions that capture entire table with dynamic widths
+  - Improved html2canvas configuration for better rendering of complex layouts
+  - Proper page breaks and sizing for PDF multi-page support
+  - All exports now include grouped data and metadata
 
 **Previous Session Fixes:**
+- Fixed ghost bar issue in year-wrapping periods (Oct-Jan) by filtering duplicate range rendering
+- Implemented dynamic field column resizing (Country, Period, CropProcess columns now resize independently)
 - Restructured Gantt from composite labels to dedicated table columns per field
 - Implemented dynamic month expansion based on data's maximum span
 - Added year wrapping labels (Jan Y+1, Feb Y+1, etc.) for clarity

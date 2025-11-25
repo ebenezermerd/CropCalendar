@@ -4,26 +4,124 @@ import * as XLSX from 'xlsx'
 import JSZip from 'jszip'
 
 /**
- * Export to Excel with multiple options
+ * Export Gantt table as Excel with visual formatting
  */
-export const exportToExcel = async (records, options = {}) => {
-  const { format = 'all', groupBy = null } = options
-  
+export const exportToExcelAsTable = async (
+  records,
+  groupedData,
+  groupingColumns,
+  options = {}
+) => {
+  const { format = 'table' } = options
+
   try {
     const workbook = XLSX.utils.book_new()
-    
-    // Option 1: All rows in one sheet
-    if (format === 'all' || format === 'raw') {
+
+    if (format === 'table') {
+      // Export table with formatting - grouped layout
+      const tableData = []
+
+      // Add grouping info header
+      tableData.push(['CROP CALENDAR GANTT EXPORT - TABLE FORMAT'])
+      tableData.push([`Export Date: ${new Date().toISOString().split('T')[0]}`])
+      tableData.push([`Total Records: ${records.length}`])
+      tableData.push([])
+
+      // Add column headers
+      const headers = [...groupingColumns, 'Period', 'Crop Process', 'Start', 'End', 'Notes']
+      tableData.push(headers)
+
+      // Add grouped data
+      if (groupedData && Object.keys(groupedData).length > 0) {
+        Object.entries(groupedData).forEach(([groupKey, groupRecords]) => {
+          tableData.push([])
+          tableData.push([`GROUP: ${groupKey}`])
+
+          groupRecords.forEach(record => {
+            const row = []
+            groupingColumns.forEach(col => {
+              row.push(record[col] || '')
+            })
+            row.push(record.period || '')
+            row.push(record.cropProcess || '')
+            row.push(record.startMonth || '')
+            row.push(record.endMonth || '')
+            row.push(record.notes || '')
+            tableData.push(row)
+          })
+        })
+      } else {
+        // If no grouped data, just list all records
+        records.forEach(record => {
+          const row = []
+          groupingColumns.forEach(col => {
+            row.push(record[col] || '')
+          })
+          row.push(record.period || '')
+          row.push(record.cropProcess || '')
+          row.push('')
+          row.push('')
+          row.push(record.notes || '')
+          tableData.push(row)
+        })
+      }
+
+      const ws = XLSX.utils.aoa_to_sheet(tableData)
+
+      // Apply styling
+      const range = XLSX.utils.decode_range(ws['!ref'])
+      for (let R = range.s.r; R <= range.e.r; ++R) {
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+          const cellAddress = XLSX.utils.encode_col(C) + XLSX.utils.encode_row(R)
+          const cell = ws[cellAddress]
+
+          if (!cell) continue
+
+          // Header row styling
+          if (R === 5) {
+            cell.fill = { fgColor: { rgb: 'FF4CAF50' }, patternType: 'solid' }
+            cell.font = { bold: true, color: { rgb: 'FFFFFFFF' } }
+            cell.alignment = { horizontal: 'center', vertical: 'center', wrapText: true }
+          }
+
+          // Group headers
+          if (cell.v && typeof cell.v === 'string' && cell.v.startsWith('GROUP:')) {
+            cell.fill = { fgColor: { rgb: 'FFE3F2FD' }, patternType: 'solid' }
+            cell.font = { bold: true, color: { rgb: 'FF1976D2' } }
+          }
+
+          // Alternating row colors for data
+          if (R > 5 && !cell.v?.toString().startsWith('GROUP:')) {
+            if (R % 2 === 0) {
+              cell.fill = { fgColor: { rgb: 'FFF5F5F5' }, patternType: 'solid' }
+            }
+          }
+        }
+      }
+
+      // Set column widths
+      ws['!cols'] = [
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 12 },
+        { wch: 20 },
+        { wch: 12 },
+        { wch: 12 },
+        { wch: 12 },
+        { wch: 20 }
+      ]
+
+      XLSX.utils.book_append_sheet(workbook, ws, 'Gantt Table')
+    } else if (format === 'raw') {
+      // Raw data export
       const wsData = records.map(record => {
         const { _index, month_mask, parsed_data, ...cleanRecord } = record
         return cleanRecord
       })
       const ws = XLSX.utils.json_to_sheet(wsData)
-      XLSX.utils.book_append_sheet(workbook, ws, 'All Data')
-    }
-    
-    // Option 2: Normalized data only
-    if (format === 'normalized') {
+      XLSX.utils.book_append_sheet(workbook, ws, 'Raw Data')
+    } else if (format === 'normalized') {
+      // Normalized only
       const wsData = records
         .filter(r => r.month_mask)
         .map(record => {
@@ -35,10 +133,8 @@ export const exportToExcel = async (records, options = {}) => {
         })
       const ws = XLSX.utils.json_to_sheet(wsData)
       XLSX.utils.book_append_sheet(workbook, ws, 'Normalized')
-    }
-    
-    // Option 3: One sheet per country
-    if (format === 'byCountry' || format === 'all') {
+    } else if (format === 'byCountry') {
+      // One sheet per country
       const groupedByCountry = {}
       records.forEach(record => {
         const country = record.countryName || 'Unknown'
@@ -48,17 +144,16 @@ export const exportToExcel = async (records, options = {}) => {
         const { _index, parsed_data, ...cleanRecord } = record
         groupedByCountry[country].push(cleanRecord)
       })
-      
+
       Object.entries(groupedByCountry).forEach(([country, countryRecords]) => {
         const ws = XLSX.utils.json_to_sheet(countryRecords)
-        const sheetName = country.substring(0, 31) // Excel sheet name limit
+        const sheetName = country.substring(0, 31)
         XLSX.utils.book_append_sheet(workbook, ws, sheetName)
       })
     }
-    
-    // Save the workbook
+
     const timestamp = new Date().toISOString().slice(0, 10)
-    XLSX.writeFile(workbook, `crop-export-${timestamp}.xlsx`)
+    XLSX.writeFile(workbook, `crop-gantt-table-${timestamp}.xlsx`)
     return { success: true, message: 'Excel export completed' }
   } catch (error) {
     console.error('Excel export error:', error)
@@ -67,27 +162,37 @@ export const exportToExcel = async (records, options = {}) => {
 }
 
 /**
- * Export Gantt chart as PNG
+ * Export entire table as PNG with dynamic widths
  */
-export const exportGanttAsPNG = async (elementId) => {
+export const exportTableAsPNG = async (elementId, options = {}) => {
+  const { scale = 2 } = options
+
   try {
     const element = document.getElementById(elementId)
-    if (!element) throw new Error('Element not found')
-    
+    if (!element) throw new Error('Gantt element not found')
+
+    // Capture the entire table with dynamic widths
     const canvas = await html2canvas(element, {
-      scale: 2,
+      scale,
       backgroundColor: '#ffffff',
       logging: false,
-      useCORS: true
+      useCORS: true,
+      allowTaint: true,
+      ignoreElements: (el) => {
+        // Ignore scrollbars and other UI elements
+        return el.className.includes('scrollbar')
+      }
     })
-    
+
     const link = document.createElement('a')
     link.href = canvas.toDataURL('image/png')
     const timestamp = new Date().toISOString().slice(0, 10)
-    link.download = `gantt-chart-${timestamp}.png`
+    link.download = `crop-gantt-table-${timestamp}.png`
+    document.body.appendChild(link)
     link.click()
-    
-    return { success: true, message: 'PNG export completed' }
+    document.body.removeChild(link)
+
+    return { success: true, message: 'PNG export completed - Full table captured' }
   } catch (error) {
     console.error('PNG export error:', error)
     return { success: false, error: error.message }
@@ -95,27 +200,32 @@ export const exportGanttAsPNG = async (elementId) => {
 }
 
 /**
- * Export Gantt chart as JPG
+ * Export entire table as JPG with dynamic widths
  */
-export const exportGanttAsJPG = async (elementId, quality = 0.95) => {
+export const exportTableAsJPG = async (elementId, options = {}) => {
+  const { scale = 2 } = options
+
   try {
     const element = document.getElementById(elementId)
-    if (!element) throw new Error('Element not found')
-    
+    if (!element) throw new Error('Gantt element not found')
+
     const canvas = await html2canvas(element, {
-      scale: 2,
+      scale,
       backgroundColor: '#ffffff',
       logging: false,
-      useCORS: true
+      useCORS: true,
+      allowTaint: true
     })
-    
+
     const link = document.createElement('a')
-    link.href = canvas.toDataURL('image/jpeg', quality)
+    link.href = canvas.toDataURL('image/jpeg', 0.95)
     const timestamp = new Date().toISOString().slice(0, 10)
-    link.download = `gantt-chart-${timestamp}.jpg`
+    link.download = `crop-gantt-table-${timestamp}.jpg`
+    document.body.appendChild(link)
     link.click()
-    
-    return { success: true, message: 'JPG export completed' }
+    document.body.removeChild(link)
+
+    return { success: true, message: 'JPG export completed - Full table captured' }
   } catch (error) {
     console.error('JPG export error:', error)
     return { success: false, error: error.message }
@@ -123,49 +233,57 @@ export const exportGanttAsJPG = async (elementId, quality = 0.95) => {
 }
 
 /**
- * Export Gantt chart as PDF
+ * Export entire table as PDF with multi-page support
  */
-export const exportGanttAsPDF = async (elementId, orientation = 'landscape') => {
+export const exportTableAsPDF = async (elementId, options = {}) => {
+  const { orientation = 'landscape', scale = 2 } = options
+
   try {
     const element = document.getElementById(elementId)
-    if (!element) throw new Error('Element not found')
-    
+    if (!element) throw new Error('Gantt element not found')
+
     const canvas = await html2canvas(element, {
-      scale: 2,
+      scale,
       backgroundColor: '#ffffff',
       logging: false,
-      useCORS: true
+      useCORS: true,
+      allowTaint: true
     })
-    
-    // Calculate dimensions for PDF
-    const imgWidth = orientation === 'landscape' ? 297 : 210 // mm (A4)
+
+    // Calculate PDF dimensions
+    const isLandscape = orientation === 'landscape'
+    const pageWidth = isLandscape ? 297 : 210 // mm (A4)
+    const pageHeight = isLandscape ? 210 : 297 // mm
+
+    const imgWidth = pageWidth - 10 // 5mm margin each side
     const imgHeight = (canvas.height * imgWidth) / canvas.width
-    
+
     const pdf = new jsPDF({
-      orientation: orientation === 'landscape' ? 'l' : 'p',
+      orientation: isLandscape ? 'l' : 'p',
       unit: 'mm',
       format: 'a4'
     })
-    
+
     let heightLeft = imgHeight
-    let position = 0
+    let position = 5 // Start with 5mm margin
     const imgData = canvas.toDataURL('image/png')
-    const pageHeight = orientation === 'landscape' ? 210 : 297 // mm
-    
-    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
-    heightLeft -= pageHeight
-    
-    while (heightLeft >= 0) {
-      position = heightLeft - imgHeight
+
+    // First page
+    pdf.addImage(imgData, 'PNG', 5, position, imgWidth, imgHeight)
+    heightLeft -= pageHeight - 10
+
+    // Additional pages if needed
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight + pageHeight - 10
       pdf.addPage()
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
-      heightLeft -= pageHeight
+      pdf.addImage(imgData, 'PNG', 5, position, imgWidth, imgHeight)
+      heightLeft -= pageHeight - 10
     }
-    
+
     const timestamp = new Date().toISOString().slice(0, 10)
-    pdf.save(`gantt-chart-${timestamp}.pdf`)
-    
-    return { success: true, message: 'PDF export completed' }
+    pdf.save(`crop-gantt-table-${timestamp}.pdf`)
+
+    return { success: true, message: 'PDF export completed - Full table captured' }
   } catch (error) {
     console.error('PDF export error:', error)
     return { success: false, error: error.message }
@@ -173,9 +291,9 @@ export const exportGanttAsPDF = async (elementId, orientation = 'landscape') => 
 }
 
 /**
- * Export as JSON
+ * Export as JSON with metadata and grouping info
  */
-export const exportAsJSON = (records, options = {}) => {
+export const exportAsJSON = (records, groupedData, groupingColumns) => {
   try {
     const cleanRecords = records.map(record => {
       const { _index, parsed_data, ...cleanRecord } = record
@@ -184,21 +302,26 @@ export const exportAsJSON = (records, options = {}) => {
         month_mask: record.month_mask.toString(2).padStart(12, '0')
       }
     })
-    
+
     const data = {
+      format: 'Crop Calendar Gantt Export',
       exportDate: new Date().toISOString(),
       totalRecords: cleanRecords.length,
+      groupingFields: groupingColumns,
+      groupedData: groupedData || {},
       records: cleanRecords
     }
-    
+
     const json = JSON.stringify(data, null, 2)
     const blob = new Blob([json], { type: 'application/json' })
     const link = document.createElement('a')
     link.href = URL.createObjectURL(blob)
     const timestamp = new Date().toISOString().slice(0, 10)
-    link.download = `crop-data-${timestamp}.json`
+    link.download = `crop-gantt-data-${timestamp}.json`
+    document.body.appendChild(link)
     link.click()
-    
+    document.body.removeChild(link)
+
     return { success: true, message: 'JSON export completed' }
   } catch (error) {
     console.error('JSON export error:', error)
@@ -207,46 +330,44 @@ export const exportAsJSON = (records, options = {}) => {
 }
 
 /**
- * Export as SVG (Gantt chart)
+ * Export Gantt table as SVG
  */
-export const exportGanttAsSVG = (elementId) => {
+export const exportTableAsSVG = async (elementId) => {
   try {
     const element = document.getElementById(elementId)
-    if (!element) throw new Error('Element not found')
-    
-    // Clone the element
-    const clone = element.cloneNode(true)
-    
-    // Create SVG wrapper
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
-    svg.setAttribute('width', element.offsetWidth)
-    svg.setAttribute('height', element.offsetHeight)
-    svg.setAttribute('viewBox', `0 0 ${element.offsetWidth} ${element.offsetHeight}`)
-    
-    // Serialize HTML to image-based SVG
-    html2canvas(element, {
+    if (!element) throw new Error('Gantt element not found')
+
+    const canvas = await html2canvas(element, {
+      scale: 2,
       backgroundColor: '#ffffff',
       logging: false,
-      useCORS: true
-    }).then(canvas => {
-      const imgData = canvas.toDataURL('image/png')
-      const image = document.createElementNS('http://www.w3.org/2000/svg', 'image')
-      image.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', imgData)
-      image.setAttribute('width', element.offsetWidth)
-      image.setAttribute('height', element.offsetHeight)
-      svg.appendChild(image)
-      
-      // Download
-      const svgString = new XMLSerializer().serializeToString(svg)
-      const blob = new Blob([svgString], { type: 'image/svg+xml' })
-      const link = document.createElement('a')
-      link.href = URL.createObjectURL(blob)
-      const timestamp = new Date().toISOString().slice(0, 10)
-      link.download = `gantt-chart-${timestamp}.svg`
-      link.click()
+      useCORS: true,
+      allowTaint: true
     })
-    
-    return { success: true, message: 'SVG export in progress' }
+
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+    svg.setAttribute('width', canvas.width)
+    svg.setAttribute('height', canvas.height)
+    svg.setAttribute('viewBox', `0 0 ${canvas.width} ${canvas.height}`)
+
+    const imgData = canvas.toDataURL('image/png')
+    const image = document.createElementNS('http://www.w3.org/2000/svg', 'image')
+    image.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', imgData)
+    image.setAttribute('width', canvas.width)
+    image.setAttribute('height', canvas.height)
+    svg.appendChild(image)
+
+    const svgString = new XMLSerializer().serializeToString(svg)
+    const blob = new Blob([svgString], { type: 'image/svg+xml' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    const timestamp = new Date().toISOString().slice(0, 10)
+    link.download = `crop-gantt-table-${timestamp}.svg`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    return { success: true, message: 'SVG export completed' }
   } catch (error) {
     console.error('SVG export error:', error)
     return { success: false, error: error.message }
@@ -254,15 +375,15 @@ export const exportGanttAsSVG = (elementId) => {
 }
 
 /**
- * Export as LZL (custom ZIP format with metadata, data, preview)
+ * Export as LZL (portable ZIP package)
  */
 export const exportAsLZL = async (records, elementId, options = {}) => {
   try {
     const zip = new JSZip()
-    
-    // 1. Metadata
+
+    // Metadata
     const metadata = {
-      format: 'LZL',
+      format: 'LZL - Crop Calendar Gantt Export',
       version: '1.0',
       exportDate: new Date().toISOString(),
       totalRecords: records.length,
@@ -270,8 +391,8 @@ export const exportAsLZL = async (records, elementId, options = {}) => {
       filterColumn: options.filterColumn || null
     }
     zip.file('metadata.json', JSON.stringify(metadata, null, 2))
-    
-    // 2. Data
+
+    // Data
     const cleanRecords = records.map(record => {
       const { _index, parsed_data, ...cleanRecord } = record
       return {
@@ -280,8 +401,13 @@ export const exportAsLZL = async (records, elementId, options = {}) => {
       }
     })
     zip.file('data.json', JSON.stringify(cleanRecords, null, 2))
-    
-    // 3. Gantt preview as PNG
+
+    // Grouped data if available
+    if (options.groupedData) {
+      zip.file('grouped_data.json', JSON.stringify(options.groupedData, null, 2))
+    }
+
+    // Gantt preview as PNG
     if (elementId) {
       try {
         const element = document.getElementById(elementId)
@@ -290,7 +416,8 @@ export const exportAsLZL = async (records, elementId, options = {}) => {
             scale: 1.5,
             backgroundColor: '#ffffff',
             logging: false,
-            useCORS: true
+            useCORS: true,
+            allowTaint: true
           })
           const imgData = canvas.toDataURL('image/png').split(',')[1]
           zip.file('preview.png', imgData, { base64: true })
@@ -299,51 +426,20 @@ export const exportAsLZL = async (records, elementId, options = {}) => {
         console.warn('Could not generate preview:', previewError)
       }
     }
-    
-    // Generate and download ZIP
+
+    // Generate and download
     const blob = await zip.generateAsync({ type: 'blob' })
     const link = document.createElement('a')
     link.href = URL.createObjectURL(blob)
     const timestamp = new Date().toISOString().slice(0, 10)
-    link.download = `crop-export-${timestamp}.lzl`
+    link.download = `crop-gantt-export-${timestamp}.lzl`
+    document.body.appendChild(link)
     link.click()
-    
-    return { success: true, message: 'LZL export completed' }
+    document.body.removeChild(link)
+
+    return { success: true, message: 'LZL export completed - Portable package created' }
   } catch (error) {
     console.error('LZL export error:', error)
-    return { success: false, error: error.message }
-  }
-}
-
-/**
- * Batch export multiple groups
- */
-export const batchExport = async (groupedRecords, exportFormat, elementId) => {
-  try {
-    const results = []
-    
-    for (const [groupName, records] of Object.entries(groupedRecords)) {
-      const safeName = groupName.replace(/[^a-z0-9]/gi, '_').toLowerCase()
-      
-      switch (exportFormat) {
-        case 'excel':
-          await exportToExcel(records, { format: 'all' })
-          results.push({ group: groupName, status: 'completed' })
-          break
-        case 'json':
-          exportAsJSON(records)
-          results.push({ group: groupName, status: 'completed' })
-          break
-        case 'lzl':
-          await exportAsLZL(records, null, { groupName: safeName })
-          results.push({ group: groupName, status: 'completed' })
-          break
-      }
-    }
-    
-    return { success: true, results }
-  } catch (error) {
-    console.error('Batch export error:', error)
     return { success: false, error: error.message }
   }
 }

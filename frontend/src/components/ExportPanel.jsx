@@ -1,56 +1,82 @@
 import React, { useState } from 'react'
 import { toast } from 'sonner'
 import {
-  exportToExcel,
-  exportGanttAsPNG,
-  exportGanttAsJPG,
-  exportGanttAsPDF,
+  exportToExcelAsTable,
+  exportTableAsPNG,
+  exportTableAsJPG,
+  exportTableAsPDF,
   exportAsJSON,
-  exportGanttAsSVG,
+  exportTableAsSVG,
   exportAsLZL
 } from '../utils/exportUtils'
 
-export default function ExportPanel({ records, ganttElementId, groupingColumns, filterColumn }) {
+export default function ExportPanel({
+  records,
+  ganttElementId,
+  groupingColumns,
+  filterColumn,
+  groupedData,
+  dynamicMonthCount,
+  columnWidth
+}) {
   const [isOpen, setIsOpen] = useState(false)
   const [isExporting, setIsExporting] = useState(false)
-  const [exportFormat, setExportFormat] = useState('excel')
-  const [excelFormat, setExcelFormat] = useState('all')
-  const [pdfOrientation, setPdfOrientation] = useState('landscape')
+  const [selectedFormat, setSelectedFormat] = useState('excel')
 
-  const handleExport = async (format) => {
+  // Format-specific options
+  const [excelFormat, setExcelFormat] = useState('table')
+  const [pdfOrientation, setPdfOrientation] = useState('landscape')
+  const [imageScale, setImageScale] = useState('high')
+
+  const handleExport = async () => {
     setIsExporting(true)
     try {
       let result
 
-      switch (format) {
+      switch (selectedFormat) {
         case 'excel':
-          result = await exportToExcel(records, { format: excelFormat })
+          result = await exportToExcelAsTable(
+            records,
+            groupedData,
+            groupingColumns,
+            { format: excelFormat }
+          )
           break
 
         case 'png':
-          result = await exportGanttAsPNG(ganttElementId)
+          result = await exportTableAsPNG(
+            ganttElementId,
+            { scale: imageScale === 'high' ? 2 : 1 }
+          )
           break
 
         case 'jpg':
-          result = await exportGanttAsJPG(ganttElementId, 0.95)
+          result = await exportTableAsJPG(
+            ganttElementId,
+            { scale: imageScale === 'high' ? 2 : 1 }
+          )
           break
 
         case 'pdf':
-          result = await exportGanttAsPDF(ganttElementId, pdfOrientation)
+          result = await exportTableAsPDF(ganttElementId, {
+            orientation: pdfOrientation,
+            scale: imageScale === 'high' ? 2 : 1
+          })
           break
 
         case 'json':
-          result = exportAsJSON(records)
+          result = exportAsJSON(records, groupedData, groupingColumns)
           break
 
         case 'svg':
-          result = exportGanttAsSVG(ganttElementId)
+          result = await exportTableAsSVG(ganttElementId)
           break
 
         case 'lzl':
           result = await exportAsLZL(records, ganttElementId, {
             groupingColumns,
-            filterColumn
+            filterColumn,
+            groupedData
           })
           break
 
@@ -72,6 +98,16 @@ export default function ExportPanel({ records, ganttElementId, groupingColumns, 
     }
   }
 
+  const formatOptions = [
+    { value: 'excel', label: '📊 Excel - Table with formatting', icon: '📊' },
+    { value: 'png', label: '🖼️ PNG - High-quality image', icon: '🖼️' },
+    { value: 'jpg', label: '📸 JPG - Compressed image', icon: '📸' },
+    { value: 'pdf', label: '📄 PDF - Professional document', icon: '📄' },
+    { value: 'svg', label: '📐 SVG - Scalable vector', icon: '📐' },
+    { value: 'json', label: '📋 JSON - Data export', icon: '📋' },
+    { value: 'lzl', label: '📦 LZL - Portable package', icon: '📦' }
+  ]
+
   return (
     <div className="relative">
       {/* Export Button */}
@@ -85,132 +121,134 @@ export default function ExportPanel({ records, ganttElementId, groupingColumns, 
 
       {/* Export Menu */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+        <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50">
           {/* Header */}
-          <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
-            <h3 className="font-bold text-gray-900">Export Options</h3>
+          <div className="px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-green-50 to-blue-50">
+            <h3 className="font-bold text-gray-900">Export Data</h3>
             <p className="text-xs text-gray-600 mt-1">
-              {records.length} records available
+              {records.length} records • {groupingColumns.length} grouping fields
             </p>
           </div>
 
-          {/* Export Options */}
+          {/* Content */}
           <div className="p-4 space-y-4">
-            {/* Excel */}
+            {/* Format Selection */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="font-semibold text-sm text-gray-900">📊 Excel</label>
-                <button
-                  onClick={() => handleExport('excel')}
-                  disabled={isExporting}
-                  className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 transition"
-                >
-                  Export
-                </button>
-              </div>
+              <label className="block text-sm font-semibold text-gray-900">
+                Select Format
+              </label>
               <select
-                value={excelFormat}
-                onChange={(e) => setExcelFormat(e.target.value)}
-                className="w-full px-3 py-2 text-xs border border-gray-300 rounded bg-white"
+                value={selectedFormat}
+                onChange={(e) => setSelectedFormat(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
               >
-                <option value="all">All Data (one sheet per country)</option>
-                <option value="raw">Raw Rows (all in one sheet)</option>
-                <option value="normalized">Normalized Only</option>
+                {formatOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
               </select>
             </div>
 
-            {/* Images */}
-            <div className="space-y-2">
-              <label className="font-semibold text-sm text-gray-900">🖼️ Images</label>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleExport('png')}
-                  disabled={isExporting}
-                  className="flex-1 px-3 py-2 text-xs bg-purple-600 text-white rounded hover:bg-purple-700 disabled:bg-gray-400 transition"
+            {/* Format-Specific Options */}
+            {selectedFormat === 'excel' && (
+              <div className="space-y-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                <label className="block text-sm font-semibold text-gray-900">
+                  Table Format
+                </label>
+                <select
+                  value={excelFormat}
+                  onChange={(e) => setExcelFormat(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded bg-white text-sm"
                 >
-                  PNG
-                </button>
-                <button
-                  onClick={() => handleExport('jpg')}
-                  disabled={isExporting}
-                  className="flex-1 px-3 py-2 text-xs bg-purple-600 text-white rounded hover:bg-purple-700 disabled:bg-gray-400 transition"
-                >
-                  JPG
-                </button>
+                  <option value="table">Full Table with Formatting</option>
+                  <option value="raw">Raw Data (all in one sheet)</option>
+                  <option value="normalized">Normalized Only</option>
+                  <option value="byCountry">One Sheet per Country</option>
+                </select>
+                <p className="text-xs text-gray-600 mt-2">
+                  ℹ️ "Full Table" exports the Gantt layout with visual shading
+                </p>
               </div>
-            </div>
+            )}
 
-            {/* PDF */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="font-semibold text-sm text-gray-900">📄 PDF</label>
-                <button
-                  onClick={() => handleExport('pdf')}
-                  disabled={isExporting}
-                  className="px-3 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700 disabled:bg-gray-400 transition"
+            {selectedFormat === 'pdf' && (
+              <div className="space-y-2 p-3 bg-red-50 rounded-lg border border-red-200">
+                <label className="block text-sm font-semibold text-gray-900">
+                  Page Orientation
+                </label>
+                <select
+                  value={pdfOrientation}
+                  onChange={(e) => setPdfOrientation(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded bg-white text-sm"
                 >
-                  Export
-                </button>
+                  <option value="landscape">Landscape (Recommended)</option>
+                  <option value="portrait">Portrait</option>
+                </select>
+                <p className="text-xs text-gray-600 mt-2">
+                  ℹ️ Multi-page if needed for complete table display
+                </p>
               </div>
-              <select
-                value={pdfOrientation}
-                onChange={(e) => setPdfOrientation(e.target.value)}
-                className="w-full px-3 py-2 text-xs border border-gray-300 rounded bg-white"
-              >
-                <option value="landscape">Landscape</option>
-                <option value="portrait">Portrait</option>
-              </select>
-            </div>
+            )}
 
-            {/* SVG & Vector */}
-            <div className="space-y-2">
-              <label className="font-semibold text-sm text-gray-900">📐 Vector</label>
-              <button
-                onClick={() => handleExport('svg')}
-                disabled={isExporting}
-                className="w-full px-3 py-2 text-xs bg-orange-600 text-white rounded hover:bg-orange-700 disabled:bg-gray-400 transition"
-              >
-                SVG
-              </button>
-            </div>
-
-            {/* Data Formats */}
-            <div className="space-y-2">
-              <label className="font-semibold text-sm text-gray-900">📋 Data</label>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleExport('json')}
-                  disabled={isExporting}
-                  className="flex-1 px-3 py-2 text-xs bg-cyan-600 text-white rounded hover:bg-cyan-700 disabled:bg-gray-400 transition"
+            {(selectedFormat === 'png' || selectedFormat === 'jpg' || selectedFormat === 'pdf') && (
+              <div className="space-y-2 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                <label className="block text-sm font-semibold text-gray-900">
+                  Resolution/Quality
+                </label>
+                <select
+                  value={imageScale}
+                  onChange={(e) => setImageScale(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded bg-white text-sm"
                 >
-                  JSON
-                </button>
-                <button
-                  onClick={() => handleExport('lzl')}
-                  disabled={isExporting}
-                  className="flex-1 px-3 py-2 text-xs bg-indigo-600 text-white rounded hover:bg-indigo-700 disabled:bg-gray-400 transition"
-                >
-                  LZL
-                </button>
+                  <option value="high">High (2x Scale - Better Quality)</option>
+                  <option value="normal">Normal (1x Scale - Smaller File)</option>
+                </select>
+                <p className="text-xs text-gray-600 mt-2">
+                  ℹ️ Exports entire table with all groups and dynamic column widths
+                </p>
               </div>
-            </div>
+            )}
 
-            {/* Info */}
-            <div className="text-xs text-gray-600 bg-gray-50 p-3 rounded border border-gray-200">
-              <p className="font-semibold mb-1">Export formats:</p>
-              <ul className="space-y-1 list-disc list-inside">
-                <li><strong>Excel:</strong> Spreadsheet with options</li>
-                <li><strong>PNG/JPG:</strong> Gantt chart as image</li>
-                <li><strong>PDF:</strong> Multi-page if needed</li>
-                <li><strong>SVG:</strong> Scalable vector graphic</li>
-                <li><strong>JSON:</strong> Raw data export</li>
-                <li><strong>LZL:</strong> Portable package (ZIP)</li>
-              </ul>
-            </div>
+            {selectedFormat === 'json' && (
+              <div className="p-3 bg-cyan-50 rounded-lg border border-cyan-200">
+                <p className="text-xs text-gray-600">
+                  ℹ️ Exports all records with metadata and grouping information
+                </p>
+              </div>
+            )}
+
+            {selectedFormat === 'svg' && (
+              <div className="p-3 bg-orange-50 rounded-lg border border-orange-200">
+                <p className="text-xs text-gray-600">
+                  ℹ️ Exports scalable vector graphic of the complete Gantt table
+                </p>
+              </div>
+            )}
+
+            {selectedFormat === 'lzl' && (
+              <div className="p-3 bg-indigo-50 rounded-lg border border-indigo-200">
+                <p className="text-xs text-gray-600">
+                  ℹ️ Creates a portable ZIP package with data, metadata, and preview
+                </p>
+              </div>
+            )}
+
+            {/* Export Button */}
+            <button
+              onClick={handleExport}
+              disabled={isExporting}
+              className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 transition font-medium text-sm mt-4"
+            >
+              {isExporting ? '⏳ Exporting...' : '📥 Export Now'}
+            </button>
           </div>
 
           {/* Footer */}
-          <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 flex justify-end">
+          <div className="px-4 py-3 border-t border-gray-200 bg-gray-50 flex justify-between items-center">
+            <p className="text-xs text-gray-600">
+              💡 Tip: Full table exports capture all data with current styling
+            </p>
             <button
               onClick={() => setIsOpen(false)}
               className="px-3 py-1 text-sm text-gray-700 bg-gray-200 rounded hover:bg-gray-300 transition"
@@ -221,7 +259,7 @@ export default function ExportPanel({ records, ganttElementId, groupingColumns, 
         </div>
       )}
 
-      {/* Overlay when menu is open */}
+      {/* Overlay */}
       {isOpen && (
         <div
           className="fixed inset-0 z-40"
