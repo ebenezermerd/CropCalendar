@@ -88,15 +88,21 @@ export default function FileUpload({ onUploadComplete, onError }) {
         }
       })
 
-      if (response.data.success) {
+      console.log('Upload response:', response.data)
+
+      if (response.data && response.data.success) {
         setIsLoading(false)
         onUploadComplete(response.data)
+      } else if (response.data && response.data.error) {
+        throw new Error(response.data.error)
       } else {
-        throw new Error(response.data.error || 'Upload failed')
+        throw new Error('Upload failed: No success response')
       }
     } catch (error) {
       setIsLoading(false)
-      onError(error.response?.data?.error || error.message || 'Upload failed')
+      console.error('Upload error:', error)
+      const errorMsg = error.response?.data?.error || error.response?.data?.detail || error.message || 'Upload failed'
+      onError(errorMsg)
     }
   }
 
