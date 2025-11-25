@@ -194,20 +194,30 @@ const captureFullTable = async (elementId, scale = 2) => {
       }
     })
 
-    // Fix spans for better text rendering
+    // Fix spans for better text rendering - CRITICAL: remove overflow-hidden
     allDivs.forEach(div => {
       const spans = div.querySelectorAll('span')
       spans.forEach(span => {
         const spanStyles = {
           display: span.style.display,
           lineHeight: span.style.lineHeight,
-          verticalAlign: span.style.verticalAlign
+          verticalAlign: span.style.verticalAlign,
+          overflow: span.style.overflow,
+          whiteSpace: span.style.whiteSpace,
+          textOverflow: span.style.textOverflow,
+          maxWidth: span.style.maxWidth
         }
         elementStyles.set(span, spanStyles)
         
-        span.style.display = 'inline'
-        span.style.lineHeight = 'normal'
-        span.style.verticalAlign = 'middle'
+        // Remove ALL text clipping properties
+        span.style.display = 'block'
+        span.style.lineHeight = '1.4'
+        span.style.verticalAlign = 'top'
+        span.style.overflow = 'visible'
+        span.style.whiteSpace = 'normal'  // Allow wrapping
+        span.style.textOverflow = 'clip'  // Remove ellipsis
+        span.style.maxWidth = 'none'
+        span.classList.remove('truncate', 'text-ellipsis')
       })
     })
 
@@ -253,12 +263,17 @@ const captureFullTable = async (elementId, scale = 2) => {
         div.style.minHeight = '85px'
       }
       
-      // Fix spans in clone
+      // Fix spans in clone - CRITICAL: remove ALL clipping
       const spans = div.querySelectorAll('span')
       spans.forEach(span => {
-        span.style.display = 'inline'
-        span.style.lineHeight = 'normal'
-        span.style.verticalAlign = 'middle'
+        span.style.display = 'block'
+        span.style.lineHeight = '1.4'
+        span.style.verticalAlign = 'top'
+        span.style.overflow = 'visible'
+        span.style.whiteSpace = 'normal'
+        span.style.textOverflow = 'clip'
+        span.style.maxWidth = 'none'
+        span.classList.remove('truncate', 'text-ellipsis')
       })
     })
     wrapper.appendChild(clone)
@@ -289,6 +304,17 @@ const captureFullTable = async (elementId, scale = 2) => {
         element.style.display = styles.display
         element.style.lineHeight = styles.lineHeight
         element.style.verticalAlign = styles.verticalAlign
+        element.style.overflow = styles.overflow
+        element.style.whiteSpace = styles.whiteSpace
+        element.style.textOverflow = styles.textOverflow
+        element.style.maxWidth = styles.maxWidth
+        // Restore Tailwind classes if they were removed
+        if (styles.whiteSpace === '' && element.className.indexOf('whitespace-nowrap') === -1) {
+          element.classList.add('whitespace-nowrap')
+        }
+        if (styles.textOverflow === '' && element.className.indexOf('text-ellipsis') === -1) {
+          element.classList.add('text-ellipsis')
+        }
       } else {
         element.style.overflow = styles.overflow
         element.style.height = styles.height
