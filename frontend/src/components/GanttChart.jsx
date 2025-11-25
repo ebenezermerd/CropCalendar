@@ -395,16 +395,11 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
                           const pairedRange = allRanges.find(r => r.isWrapped)
                           const wrappedRange = allRanges.find(r => r.wrapped)
                           
-                          // Filter to render only: wrapped ranges (with extension) + normal ranges
-                          // Skip: 
-                          //  1. isWrapped ranges (they're part of wrapped)
-                          //  2. Normal ranges at month 0 if there's a paired isWrapped (they're incorporated into wrapped bar)
+                          // Filter to render: wrapped ranges (extended) + normal ranges
+                          // Skip isWrapped ranges (incorporated into wrapped) and duplicate Jan bars
                           const rangesToRender = allRanges.filter(range => {
-                            if (range.isWrapped) return false  // Skip isWrapped
-                            if (range.start === 0 && range.end === 0 && pairedRange && wrappedRange) {
-                              // Skip Jan Year 1 if it's part of a wrap
-                              return false
-                            }
+                            if (range.isWrapped) return false
+                            if (range.start === 0 && range.end === 0 && pairedRange && wrappedRange) return false
                             return true
                           })
                           
