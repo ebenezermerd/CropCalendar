@@ -392,17 +392,14 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
                               return null
                             }
                             
-                            let startMonth = range.start
-                            let endMonth = range.end
-                            
                             // If wrapped, extend to include the paired isWrapped range
                             if (range.wrapped) {
                               const pairedRange = ranges.find(r => r.isWrapped)
                               if (pairedRange && dynamicMonthCount > 12) {
                                 // Show from startMonth in Year 1 to end of pairedRange in Year 2
-                                // e.g., Oct(9) to Jan(0) in Y+1 = positions 9 through 12+0 = 0-12
-                                startMonth = range.start
-                                endMonth = 12 + pairedRange.end
+                                // e.g., Oct(9) to Jan(0) in Y+1 = positions 9 through 12+0 = 12
+                                const startMonth = range.start
+                                const endMonth = 12 + pairedRange.end
                                 
                                 const barWidth = (endMonth - startMonth + 1) * columnWidth - 8
                                 const barLeft = startMonth * columnWidth + 4
@@ -437,11 +434,13 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
                                   </div>
                                 )
                               }
+                              // Skip wrapped ranges that don't have proper pairing or not enough month space
+                              return null
                             }
                             
-                            // Handle normal (non-wrapped) ranges
-                            let barStart = startMonth
-                            let barEnd = endMonth
+                            // Handle normal (non-wrapped) ranges only
+                            const barStart = range.start
+                            const barEnd = range.end
                             
                             const barWidth = (barEnd - barStart + 1) * columnWidth - 8
                             const barLeft = barStart * columnWidth + 4
