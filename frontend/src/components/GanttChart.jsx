@@ -48,8 +48,9 @@ function extractMonthRanges(mask) {
 }
 
 function formatDateRange(monthStart, monthEnd) {
-  const startDay = 2
-  const endDay = monthEnd === monthStart ? 15 : DAYS_IN_MONTH[monthEnd % 12] - 2
+  // Use actual calendar days: 1st to last day of month
+  const startDay = 1
+  const endDay = DAYS_IN_MONTH[monthEnd % 12]
   
   const startMonth = MONTHS[monthStart % 12]
   const endMonth = MONTHS[monthEnd % 12]
@@ -66,17 +67,23 @@ function getColorForGroup(index) {
 
 // Calculate the maximum month span needed across all records
 function calculateMaxMonthSpan(records) {
-  let maxEnd = 11
+  let maxMonthsNeeded = 12  // Start with at least 12 months
   
   records.forEach(record => {
     if (record.month_mask) {
       const ranges = extractMonthRanges(record.month_mask)
       ranges.forEach(range => {
-        if (range.wrapped) {
-          // Wrapped range: Dec to Jan next year
-          const span = (11 - range.start) + range.end + 1
-          if (span > maxEnd - (-1)) {
-            maxEnd = 11 + range.end
+        if (range.wrapped && !range.isWrapped) {
+          // This is the wrapped part (e.g., Dec in a Dec-Mar wrap)
+          // We need to show all months from Dec through the end of next year's span
+          // If range.start=11 (Dec) and we have an isWrapped part, find its end
+          for (const otherRange of ranges) {
+            if (otherRange.isWrapped) {
+              // Wrapped part goes from Jan (0) to otherRange.end
+              // Total months: (12 - range.start) + (otherRange.end + 1) = 12 - 11 + end + 1 = end + 2
+              const monthsSpanned = (12 - range.start) + (otherRange.end + 1)
+              maxMonthsNeeded = Math.max(maxMonthsNeeded, monthsSpanned)
+            }
           }
         }
       })
@@ -84,7 +91,7 @@ function calculateMaxMonthSpan(records) {
   })
   
   // Minimum 12 months, maximum reasonable is 24
-  return Math.max(12, Math.min(maxEnd + 1, 24))
+  return Math.max(12, Math.min(maxMonthsNeeded, 24))
 }
 
 export default function GanttChart({ filterResults, groupingColumns, onBack }) {
