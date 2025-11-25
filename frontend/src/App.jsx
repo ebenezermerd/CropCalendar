@@ -55,11 +55,11 @@ function App() {
     setCurrentStep('filtering')
   }
 
-  const handleGanttColumnSelect = (column) => {
-    // Column selected for Gantt grouping
+  const handleGanttColumnSelect = (columns) => {
+    // Columns selected for Gantt grouping (array of column names)
     setUploadData(prev => ({
       ...prev,
-      gantt_grouping_column: column
+      gantt_grouping_columns: columns
     }))
     setCurrentStep('gantt')
   }
@@ -129,12 +129,12 @@ function App() {
           </div>
         </div>
       )}
-      {currentStep === 'gantt' && uploadData?.filter_results && uploadData?.gantt_grouping_column && (
+      {currentStep === 'gantt' && uploadData?.filter_results && uploadData?.gantt_grouping_columns && (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
           <div className="max-w-full mx-auto px-4 py-12">
             <GanttChart
               filterResults={uploadData.filter_results}
-              groupingColumn={uploadData.gantt_grouping_column}
+              groupingColumns={uploadData.gantt_grouping_columns}
               onBack={handleBackFromGantt}
             />
           </div>

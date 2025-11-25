@@ -84,16 +84,22 @@ Gantt column selection + Month-grid visualization with interactive rectangles, z
 - User selects values and system filters matching rows
 - Results include both raw and parsed data with month masks
 
-### Gantt Column Selection System (NEW)
-- **Beautiful column selector**: Grid-based selection of grouping columns
-- **Unique value preview**: Shows how many unique values will appear as rows
-- **Flexible grouping**: Same filtered data can be grouped different ways
-- **Seamless UX**: Toast notifications showing what will be grouped
+### Gantt Column Selection System (NEW - MULTI-COLUMN)
+- **Multi-column selection**: Check multiple columns for hierarchical grouping (e.g., Country + Period + Crop)
+- **Professional checkbox UI**: Clean grid-based selector with unique value counts per column
+- **Select All / Clear All**: Bulk operations for rapid configuration
+- **Composite grouping keys**: Multiple columns create labels like "Sudan | Q1 | Sesame"
+- **Real-time unique group count**: Shows preview of how many groups will appear
+- **Badge display**: Selected columns shown as removable badges with X button
+- **Flexible grouping**: Same filtered data can be grouped multiple ways without re-filtering
+- **Seamless UX**: Toast notifications showing grouping configuration
 - **All columns available**: Any non-hidden column can be used for grouping
+- **Professional tips**: Hints about single vs. multi-column grouping benefits
 
-### Interactive Gantt View System (UPDATED)
+### Interactive Gantt View System (UPDATED - MULTI-COLUMN SUPPORT)
 - **Month-grid visualization**: 12 months on X-axis, grouped records on Y-axis
-- **Dynamic grouping**: Uses selected column to group records (Country, Crop, Region, etc.)
+- **Dynamic multi-column grouping**: Uses selected columns to group records (Country, Crop, Region, Period, etc.)
+- **Composite labels**: Group labels show all selected columns (e.g., "Sudan | Q1 | Sesame")
 - **Visual rectangles**: Generated from 12-bit month_mask with color coding per group
 - **Year-end wrapping**: Handles Dec-Jan spans (displays as two separate rectangles when needed)
 - **Hover tooltips**: Full row data, source row index, month range display
@@ -101,7 +107,7 @@ Gantt column selection + Month-grid visualization with interactive rectangles, z
 - **Color assignment**: Unique colors per group for visual distinction
 - **Inline editing**: Click bars to open modal, toggle months, save updated month_mask
 - **Interactive feedback**: Hover effects, toast notifications on save
-- **Filter + Grouping display**: Shows both filter column and grouping column in header
+- **Filter + Grouping display**: Shows both filter column and all grouping columns in header
 
 ### File Handling
 - CSV, XLSX, XLS, XML support
@@ -270,16 +276,20 @@ All five functionalities are fully implemented:
 12. Search and filter unique values with fuzzy matching
 13. Bulk-select or deselect all values
 14. Get filtered results with both raw and parsed data
-15. **Choose any column to group by in Gantt visualization** ← NEW
-16. See how many unique values will appear as rows
-17. View interactive Gantt chart with month-grid visualization
-18. See harvest periods as colored rectangles, grouped by chosen column
-19. Each group (country, region, crop, etc.) appears as a row with unique color
-20. Multiple records in same group show as separate bars
-21. Zoom between month and quarter views for different perspectives
-22. Hover over bars to see full row data and source index
-23. Click bars to inline edit month masks for manual corrections
-24. Display shows both filter criteria and grouping column
+15. **Select multiple columns for Gantt grouping** ← NEW (Multi-Column!)
+16. See professional checkbox UI with unique value counts
+17. View real-time preview of how many groups will appear
+18. Choose column combinations (e.g., Country + Period + Crop)
+19. See selected columns as removable badges
+20. View interactive Gantt chart with month-grid visualization
+21. See harvest periods as colored rectangles, grouped by selected columns
+22. Each group combination appears as a row with unique color
+23. Composite group labels (e.g., "Sudan | Q1 | Sesame") for clarity
+24. Multiple records in same group show as separate bars
+25. Zoom between month and quarter views for different perspectives
+26. Hover over bars to see full row data and source index
+27. Click bars to inline edit month masks for manual corrections
+28. Display shows both filter criteria and all grouping columns
 
 Ready to proceed with FUNCTIONALITY 6: Export Options (Excel, PNG, PDF, LZL, JSON).
 
@@ -296,11 +306,39 @@ STEP 3: Parse Months & Generate Masks
    ↓
 STEP 4: Filter by Any Column (Crop, Country, etc.)
    ↓
-STEP 5: Select Grouping Column for Gantt ← NEW!
+STEP 5: Select MULTIPLE Grouping Columns ← UPDATED! Multi-Column!
+         - Check 1 column: Country → shows each country as a row
+         - Check 2+ columns: Country + Period → shows each combo as a row
+         - Check 3+ columns: Country + Period + Crop → detailed hierarchy
    ↓
 STEP 6: View Interactive Gantt with Colored Bars
-         - Each group as a row
-         - Multiple records show separate bars
+         - Each unique group combination as a row
+         - Multiple records show separate bars within group
+         - Composite labels show all selected columns
          - Hover for details, click to edit
          - Zoom month/quarter view
+```
+
+### Example Use Cases:
+
+**Single Column Grouping:**
+```
+Filter: Crop = "Sesame"
+Select: Country
+Result:
+  Sudan          |████████████||||||||||||
+  Ethiopia       |════════════||||||||
+  Uganda         |████████════════════
+```
+
+**Multi-Column Grouping:**
+```
+Filter: Crop = "Sesame"
+Select: Country + Season
+Result:
+  Sudan | Q1     |████████||||
+  Sudan | Q2     |════════||||
+  Ethiopia | Q1  |████═══||||
+  Ethiopia | Q2  |════║═══════
+  Uganda | Q1    |████████║
 ```

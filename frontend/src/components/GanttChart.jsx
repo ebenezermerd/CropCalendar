@@ -59,7 +59,7 @@ function getColorForGroup(index, groupName) {
   return COLORS[index % COLORS.length]
 }
 
-export default function GanttChart({ filterResults, groupingColumn, onBack }) {
+export default function GanttChart({ filterResults, groupingColumns, onBack }) {
   const [zoomLevel, setZoomLevel] = useState('month') // 'month' or 'quarter'
   const [editingRowId, setEditingRowId] = useState(null)
   const [editingMask, setEditingMask] = useState(null)
@@ -67,20 +67,26 @@ export default function GanttChart({ filterResults, groupingColumn, onBack }) {
 
   const records = filterResults?.records || []
   const filterColumn = filterResults?.filter?.column
-  const columnName = groupingColumn // Use the selected grouping column, not the filter column
   
-  // Group records by their grouping column value
+  // Support both single string (legacy) and array of columns (new multi-select)
+  const groupingColumnArray = Array.isArray(groupingColumns) ? groupingColumns : [groupingColumns]
+  
+  // Group records by their grouping column values
   const groupedRecords = useMemo(() => {
     const groups = {}
     records.forEach((record, idx) => {
-      const groupKey = record[columnName] || 'Unknown'
+      // Create composite key from all grouping columns
+      const groupKey = groupingColumnArray
+        .map(col => record[col] || 'Unknown')
+        .join(' | ')
+      
       if (!groups[groupKey]) {
         groups[groupKey] = []
       }
       groups[groupKey].push({ ...record, _index: idx })
     })
     return groups
-  }, [records, columnName])
+  }, [records, groupingColumnArray])
 
   const groupNames = Object.keys(groupedRecords).sort()
 
@@ -118,7 +124,7 @@ export default function GanttChart({ filterResults, groupingColumn, onBack }) {
           <h2 className="text-2xl font-bold text-gray-900">Gantt Visualization</h2>
           <p className="text-gray-600 text-sm mt-1">
             <span className="inline-block px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium mr-2">Filtered by: {filterColumn}</span>
-            Interactive month-grid showing harvest periods grouped by <strong>{columnName}</strong>
+            Interactive month-grid showing harvest periods grouped by <strong>{groupingColumnArray.join(' + ')}</strong>
           </p>
         </div>
         <button
