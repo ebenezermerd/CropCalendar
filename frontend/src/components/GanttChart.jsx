@@ -393,7 +393,8 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
                           const barWidth = (barEnd - barStart + 1) * columnWidth - 8
                           const barLeft = barStart * columnWidth + 4
                           
-                          const dateRange = formatDateRange(range.start, range.end)
+                          // Use the actual period from record if available, otherwise use month range
+                          const dateRange = record.period || formatDateRange(range.start, range.end)
 
                           return (
                             <div
