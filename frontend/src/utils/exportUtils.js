@@ -138,6 +138,7 @@ export const exportToExcelWithColumns = async (
 
 /**
  * Helper function to capture entire scrollable table
+ * Expands cell heights temporarily to ensure all text is captured properly
  */
 const captureFullTable = async (elementId, scale = 2) => {
   const container = document.getElementById(elementId)
@@ -147,44 +148,93 @@ const captureFullTable = async (elementId, scale = 2) => {
   const innerContainer = container.querySelector('.inline-block')
   if (!innerContainer) throw new Error('Inner table element not found')
 
-  // Calculate full width including all months
-  const fullWidth = innerContainer.offsetWidth
-  const fullHeight = innerContainer.offsetHeight
+  // Save original state
+  const originalOverflow = container.style.overflow
+  const originalWidth = container.style.width
+  const originalHeight = container.style.height
+  const originalScrollLeft = container.scrollLeft
+  const originalScrollTop = container.scrollTop
 
-  // Create a temporary wrapper to prevent css issues
-  const wrapper = document.createElement('div')
-  wrapper.style.position = 'fixed'
-  wrapper.style.top = '0'
-  wrapper.style.left = '0'
-  wrapper.style.width = fullWidth + 'px'
-  wrapper.style.height = fullHeight + 'px'
-  wrapper.style.zIndex = '-9999'
-  wrapper.style.backgroundColor = '#ffffff'
-  wrapper.style.overflow = 'visible'
-
-  // Clone the entire table
-  const clone = innerContainer.cloneNode(true)
-  wrapper.appendChild(clone)
-  document.body.appendChild(wrapper)
-
+  // Store original div styles - we'll modify them for export
+  const allDivs = innerContainer.querySelectorAll('div')
+  const originalStyles = new Map()
+  
   try {
-    // Capture with proper settings for full table
+    // Step 1: Expand all divs to auto height to show all text
+    allDivs.forEach(div => {
+      const originalHeight = div.style.height
+      const originalMinHeight = div.style.minHeight
+      originalStyles.set(div, { height: originalHeight, minHeight: originalMinHeight })
+      
+      // Only modify height if it's currently set to a fixed value (like 50px or 60px)
+      if (originalHeight && originalHeight.includes('px')) {
+        div.style.height = 'auto'
+        div.style.minHeight = 'auto'
+      }
+    })
+
+    // Step 2: Get full dimensions after expansion
+    await new Promise(resolve => setTimeout(resolve, 50))
+    const fullWidth = innerContainer.offsetWidth
+    const fullHeight = innerContainer.offsetHeight
+
+    // Step 3: Prepare container for capture
+    container.style.overflow = 'visible'
+    container.style.width = fullWidth + 'px'
+    container.style.height = fullHeight + 'px'
+    container.scrollLeft = 0
+    container.scrollTop = 0
+
+    // Step 4: Force browser to recalculate layout
+    await new Promise(resolve => setTimeout(resolve, 50))
+
+    // Step 5: Create wrapper and clone for capturing
+    const wrapper = document.createElement('div')
+    wrapper.style.position = 'fixed'
+    wrapper.style.left = '-9999px'
+    wrapper.style.top = '-9999px'
+    wrapper.style.width = fullWidth + 'px'
+    wrapper.style.height = fullHeight + 'px'
+    wrapper.style.backgroundColor = '#ffffff'
+    wrapper.style.overflow = 'hidden'
+    wrapper.style.zIndex = '-9999'
+
+    // Clone the expanded inner container
+    const clone = innerContainer.cloneNode(true)
+    wrapper.appendChild(clone)
+    document.body.appendChild(wrapper)
+
+    // Step 6: Capture with expanded cell heights
     const canvas = await html2canvas(wrapper, {
       scale,
       backgroundColor: '#ffffff',
       logging: false,
       useCORS: true,
       allowTaint: true,
-      width: fullWidth,
-      height: fullHeight,
-      windowHeight: fullHeight,
-      windowWidth: fullWidth
+      imageTimeout: 0,
+      windowWidth: fullWidth,
+      windowHeight: fullHeight
     })
+
+    // Clean up
+    document.body.removeChild(wrapper)
 
     return canvas
   } finally {
-    // Clean up
-    document.body.removeChild(wrapper)
+    // Restore original state
+    allDivs.forEach(div => {
+      const original = originalStyles.get(div)
+      if (original) {
+        div.style.height = original.height
+        div.style.minHeight = original.minHeight
+      }
+    })
+
+    container.style.overflow = originalOverflow
+    container.style.width = originalWidth
+    container.style.height = originalHeight
+    container.scrollLeft = originalScrollLeft
+    container.scrollTop = originalScrollTop
   }
 }
 
