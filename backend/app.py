@@ -767,7 +767,7 @@ def parse_and_normalize_data(upload_id: str):
                 end_date_col = None
                 harvest_calendar_col = None
                 season_col = None
-                period_col = None
+                period_col = 'period' if 'period' in df.columns else None  # Always try period as fallback
                 
                 for col_name, col_type in mappings.items():
                     if col_type == 'start_date':
@@ -778,10 +778,6 @@ def parse_and_normalize_data(upload_id: str):
                         harvest_calendar_col = col_name
                     elif col_type == 'season':
                         season_col = col_name
-                
-                # Also try to find period column (not mapped but might contain date ranges)
-                if 'period' in df.columns and not harvest_calendar_col and not season_col:
-                    period_col = 'period'
                 
                 for col_name, col_type in mappings.items():
                     if col_type == 'ignore':
@@ -810,19 +806,26 @@ def parse_and_normalize_data(upload_id: str):
                     elif col_type not in ['start_date', 'end_date']:  # Skip storing raw date columns
                         normalized[col_type] = str(value) if pd.notna(value) else None
                 
-                # If no month_mask was set yet, try period column as fallback
-                if normalized.get('month_mask') is None or normalized.get('month_mask') == 0:
-                    if period_col:
-                        period_value = raw_row.get(period_col)
-                        start_date = raw_row.get(start_date_col) if start_date_col else None
-                        end_date = raw_row.get(end_date_col) if end_date_col else None
-                        
-                        month_mask, needs_review, parsed_months = parse_month_string(period_value, start_date, end_date)
+                # If month_mask is 0 (parse failed), try period column as fallback
+                if (normalized.get('month_mask') is None or normalized.get('month_mask') == 0) and period_col:
+                    period_value = raw_row.get(period_col)
+                    start_date = raw_row.get(start_date_col) if start_date_col else None
+                    end_date = raw_row.get(end_date_col) if end_date_col else None
+                    
+                    month_mask, needs_review, parsed_months = parse_month_string(period_value, start_date, end_date)
+                    
+                    # Only update if we successfully parsed something (month_mask > 0)
+                    if month_mask > 0:
                         normalized['month_mask'] = month_mask
                         normalized['parsed_months'] = parsed_months
-                        if needs_review:
-                            requires_review = True
-                            review_reason = f"Could not parse: {period_value}"
+                        requires_review = False  # Clear the review flag if fallback succeeded
+                        review_reason = None
+                    elif month_mask == 0 and needs_review:
+                        # Fallback also failed to parse
+                        normalized['month_mask'] = month_mask
+                        normalized['parsed_months'] = parsed_months
+                        requires_review = True
+                        review_reason = f"Could not parse period: {period_value}"
                 
                 # Store record
                 record_data = {
