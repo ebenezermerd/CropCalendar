@@ -1,6 +1,6 @@
 # Crop Calendar Gantt Export Tool
 
-## 🎯 Project Status: FUNCTIONALITY 4 COMPLETE ✅
+## 🎯 Project Status: FUNCTIONALITY 5 COMPLETE ✅
 
 ### FILE UPLOAD & PREVIEW (FUNCTIONALITY 1) - COMPLETE ✅
 Professional, production-ready file upload and data preview system.
@@ -13,6 +13,9 @@ Robust month/season extraction with 12-bit month masks, manual review flagging, 
 
 ### GROUP SELECTION & FILTERING (FUNCTIONALITY 4) - COMPLETE ✅
 Column-based filtering with fuzzy search, bulk selection, and filtered results with parsed data.
+
+### INTERACTIVE GANTT VIEW (FUNCTIONALITY 5) - COMPLETE ✅
+Month-grid visualization with interactive rectangles, zoom controls, hover tooltips, and inline editing.
 
 **Frontend:** Professional React + Tailwind UI with drag-drop, file validation, progress tracking, column mapper, parsing UI, toast notifications
 **Backend:** FastAPI with intelligent column auto-detection, mapping endpoints, robust month/season parsing with month_mask generation
@@ -29,8 +32,9 @@ Column-based filtering with fuzzy search, bulk selection, and filtered results w
 4. **UploadPage.jsx** - Complete upload workflow with next button
 5. **ColumnMapping.jsx** - Advanced column mapper with dropdowns & toast notifications
 6. **ParsingResults.jsx** - Parsing UI with progress, stats, manual review flags
-7. **GroupSelector.jsx** - Column selector, fuzzy search, bulk selection, filtering (NEW)
-8. **App.jsx** - Application root with 4-step routing (upload → mapping → parsing → filtering)
+7. **GroupSelector.jsx** - Column selector, fuzzy search, bulk selection, filtering
+8. **GanttChart.jsx** - Interactive Gantt visualization with zoom, tooltips, inline editing (NEW)
+9. **App.jsx** - Application root with 5-step routing (upload → mapping → parsing → filtering → gantt)
 
 ### Backend Features
 - `POST /api/upload` - File upload with preview and auto-detection
@@ -71,13 +75,23 @@ Column-based filtering with fuzzy search, bulk selection, and filtered results w
 - 100% parsing success rate on sample data (18/18 records)
 - Sample data preview in UI
 
-### Group Selection & Filtering System (NEW)
+### Group Selection & Filtering System
 - Show detected unique values for any chosen column
 - Search capability with fuzzy matching (Fuse.js)
 - Fuzzy merge option for similar names
 - Bulk-select capability with select/clear all buttons
 - User selects values and system filters matching rows
 - Results include both raw and parsed data with month masks
+
+### Interactive Gantt View System (NEW)
+- **Month-grid visualization**: 12 months on X-axis, countries/groups on Y-axis
+- **Visual rectangles**: Generated from 12-bit month_mask with color coding per group
+- **Year-end wrapping**: Handles Dec-Jan spans (displays as two separate rectangles when needed)
+- **Hover tooltips**: Full row data, source row index, month range display
+- **Zoom controls**: Toggle between Month view (12 cells) and Quarter view (4 cells)
+- **Color assignment**: Unique colors per group for visual distinction
+- **Inline editing**: Click bars to open modal, toggle months, save updated month_mask
+- **Interactive feedback**: Hover effects, toast notifications on save
 
 ### File Handling
 - CSV, XLSX, XLS, XML support
@@ -192,11 +206,13 @@ Growing_Period → harvest_calendar ✅
 
 ## 📋 Next Features to Build
 
-1. **Group Selector** - Filter by crop name, country, etc. (FUNCTIONALITY 4)
-2. **Gantt Viewer** - Interactive month-grid visualization (FUNCTIONALITY 5)
-3. **Export Options** - Excel, PNG, PDF, LZL, JSON (FUNCTIONALITY 6)
+1. **Export Options** - Excel, PNG, PDF, LZL, JSON (FUNCTIONALITY 6)
+   - Download filtered results as Excel
+   - Export Gantt chart as PNG/PDF image
+   - Custom LZL package format for data preservation
+   - JSON export for API integration
 
-FUNCTIONALITY 3 (Parsing & Normalization) is complete with month extraction and month_mask generation. All data is now parsed and ready for visualization and filtering.
+FUNCTIONALITY 5 (Interactive Gantt View) is complete with month-grid visualization, zoom controls, hover tooltips, and inline editing. All data is now visualized and editable.
 
 ---
 
@@ -220,13 +236,14 @@ FUNCTIONALITY 3 (Parsing & Normalization) is complete with month extraction and 
 
 ---
 
-**Status:** ✅ FUNCTIONALITY 1-4 COMPLETE & PRODUCTION-READY
+**Status:** ✅ FUNCTIONALITY 1-5 COMPLETE & PRODUCTION-READY
 
-All four functionalities are fully implemented:
+All five functionalities are fully implemented:
 - FUNCTIONALITY 1 ✅ - File Upload & Preview
 - FUNCTIONALITY 2 ✅ - Column Mapping & Customization (with toast notifications)
 - FUNCTIONALITY 3 ✅ - Parsing & Normalization (with month_mask generation)
 - FUNCTIONALITY 4 ✅ - Group Selection & Filtering (with fuzzy search)
+- FUNCTIONALITY 5 ✅ - Interactive Gantt View (month-grid with zoom, tooltips, editing)
 
 ### What Users Can Do Now:
 1. Upload agricultural data files (CSV, XLSX, XLS, XML)
@@ -243,5 +260,11 @@ All four functionalities are fully implemented:
 12. Search and filter unique values with fuzzy matching
 13. Bulk-select or deselect all values
 14. Get filtered results with both raw and parsed data
+15. View interactive Gantt chart with month-grid visualization
+16. See harvest periods as colored rectangles grouped by country/crop
+17. Zoom between month and quarter views for different perspectives
+18. Hover over bars to see full row data and source index
+19. Click bars to inline edit month masks for manual corrections
+20. Toggle between different grouping columns for various analyses
 
-Ready to proceed with FUNCTIONALITY 5: Gantt Viewer & Visualization.
+Ready to proceed with FUNCTIONALITY 6: Export Options (Excel, PNG, PDF, LZL, JSON).
