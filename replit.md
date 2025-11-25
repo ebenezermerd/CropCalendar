@@ -17,11 +17,16 @@ The application follows a client-server architecture.
 - **Intelligent Auto-Detection & Column Mapping**: Server-side auto-detection identifies 9 column types (agricultural + temporal) using keyword matching and value analysis with confidence scoring. Users can customize mappings via an interactive UI.
 - **Robust Parsing & Normalization**: Extracts month/season information (e.g., "Jan-Mar", "3-5", "All year") and generates 12-bit month masks for efficient querying. Manual review flags assist with unparseable values.
 - **Group Selection & Filtering**: Allows users to filter data by any column, offering fuzzy search, bulk selection, and presentation of both raw and parsed results.
-- **Interactive Gantt View**:
-    - **Multi-column Grouping**: Users can select multiple columns to create hierarchical groupings (e.g., Country + Period + Crop).
-    - **Month-grid Visualization**: Displays crop periods on a 12-month X-axis, with grouped records on the Y-axis.
-    - **Dynamic Display**: Visual rectangles generated from month masks, color-coded for visual distinction, with year-end wrapping for spans like Dec-Jan.
-    - **Interactivity**: Includes zoom controls (Month/Quarter view), hover tooltips for date ranges, and inline editing of month masks.
+- **Interactive Gantt View with Dynamic Columns**:
+    - **Table-based layout**: Each grouping field gets its own dedicated column (Country | Period | CropProcess | months...)
+    - **Dynamic month expansion**: Automatically expands columns to fit longest data span (12-24 months)
+    - **Year wrapping labels**: Months beyond year 1 labeled as "Jan Y+1", "Feb Y+1", etc.
+    - **Resizable columns**: Drag column borders to adjust month widths dynamically
+    - **Multi-column grouping**: Users can select multiple columns to create hierarchical groupings (Country + Period + Crop)
+    - **CropProcess sorting**: Dropdown to group by Planting → Growing → Harvesting sequence
+    - **Visual rectangles**: Generated from month masks with color-coding and year-end wrapping
+    - **Date range tooltips**: Hover shows actual dates (e.g., "Jan 02 - Feb 26")
+    - **Inline editing**: Click bars to edit month masks
 
 ### External Dependencies
 - **Frontend**:
@@ -29,10 +34,18 @@ The application follows a client-server architecture.
     - `Vite`: Frontend build tool.
     - `Tailwind CSS`: Utility-first CSS framework.
     - `Axios`: Promise-based HTTP client.
+    - `Sonner`: Toast notification library.
     - `html2canvas`, `jsPDF`, `XLSX`: (Planned for future export functionality).
 - **Backend**:
     - `FastAPI`: Web framework for building APIs.
     - `Uvicorn`: ASGI server.
     - `Pandas`: Data manipulation and analysis library.
-    - `Openpyxl`: Library for reading/writing Excel 2010 xlsx/xlsm/xltx/xltm files.
+    - `Openpyxl`: Library for reading/writing Excel files.
     - `SQLModel`: Library for interacting with SQL databases.
+
+### Recent Changes (Latest Session)
+- Restructured Gantt from composite labels to dedicated table columns per field
+- Implemented dynamic month expansion based on data's maximum span
+- Added year wrapping labels (Jan Y+1, Feb Y+1, etc.) for clarity
+- Implemented resizable column functionality with mouse drag
+- All features maintain compatibility with existing filtering and grouping

@@ -9,7 +9,6 @@ const COLORS = [
   '#06B6D4', '#6366F1', '#D97706', '#059669', '#7C3AED', '#DC2626'
 ]
 
-// Extract contiguous month ranges from 12-bit month_mask
 function extractMonthRanges(mask) {
   const ranges = []
   let inRange = false
@@ -48,20 +47,44 @@ function extractMonthRanges(mask) {
   return ranges
 }
 
-// Convert month range to date range
 function formatDateRange(monthStart, monthEnd) {
   const startDay = 2
-  const endDay = monthEnd === monthStart ? 15 : DAYS_IN_MONTH[monthEnd] - 2
+  const endDay = monthEnd === monthStart ? 15 : DAYS_IN_MONTH[monthEnd % 12] - 2
   
-  const startStr = `${MONTHS[monthStart]} ${String(startDay).padStart(2, '0')}`
-  const endStr = `${MONTHS[monthEnd]} ${String(endDay).padStart(2, '0')}`
+  const startMonth = MONTHS[monthStart % 12]
+  const endMonth = MONTHS[monthEnd % 12]
+  
+  const startStr = `${startMonth} ${String(startDay).padStart(2, '0')}`
+  const endStr = `${endMonth} ${String(endDay).padStart(2, '0')}`
   
   return `${startStr} - ${endStr}`
 }
 
-// Get color for a specific row/group
 function getColorForGroup(index) {
   return COLORS[index % COLORS.length]
+}
+
+// Calculate the maximum month span needed across all records
+function calculateMaxMonthSpan(records) {
+  let maxEnd = 11
+  
+  records.forEach(record => {
+    if (record.month_mask) {
+      const ranges = extractMonthRanges(record.month_mask)
+      ranges.forEach(range => {
+        if (range.wrapped) {
+          // Wrapped range: Dec to Jan next year
+          const span = (11 - range.start) + range.end + 1
+          if (span > maxEnd - (-1)) {
+            maxEnd = 11 + range.end
+          }
+        }
+      })
+    }
+  })
+  
+  // Minimum 12 months, maximum reasonable is 24
+  return Math.max(12, Math.min(maxEnd + 1, 24))
 }
 
 export default function GanttChart({ filterResults, groupingColumns, onBack }) {
@@ -70,6 +93,9 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
   const [editingMask, setEditingMask] = useState(null)
   const [hoveredRow, setHoveredRow] = useState(null)
   const [sortByCropProcess, setSortByCropProcess] = useState(null)
+  const [columnWidth, setColumnWidth] = useState(60)
+  const [isResizing, setIsResizing] = useState(false)
+  const [resizeStart, setResizeStart] = useState(0)
 
   const records = filterResults?.records || []
   const filterColumn = filterResults?.filter?.column
@@ -99,6 +125,11 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
     })
     return groups
   }, [records, groupingColumnArray])
+
+  // Calculate dynamic month span
+  const dynamicMonthCount = useMemo(() => {
+    return calculateMaxMonthSpan(records)
+  }, [records])
 
   let groupNames = Object.keys(groupedRecords).sort()
 
@@ -130,13 +161,38 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
     col.toLowerCase().includes('cropprocess') || col.toLowerCase().includes('crop_process')
   )
 
-  const cellWidth = zoomLevel === 'month' ? 60 : 180
   const cellHeight = 60
-  const monthsPerCell = zoomLevel === 'month' ? 1 : 3
-  const gridWidth = zoomLevel === 'month' ? 12 : 4
-  
-  // Dynamic column width for field columns
   const fieldColumnWidth = 140
+
+  const handleMouseDown = (e) => {
+    setIsResizing(true)
+    setResizeStart(e.clientX)
+  }
+
+  const handleMouseMove = (e) => {
+    if (!isResizing) return
+    
+    const diff = e.clientX - resizeStart
+    const newWidth = Math.max(30, columnWidth + diff)
+    setColumnWidth(newWidth)
+    setResizeStart(e.clientX)
+  }
+
+  const handleMouseUp = () => {
+    setIsResizing(false)
+  }
+
+  React.useEffect(() => {
+    if (isResizing) {
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+      
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove)
+        document.removeEventListener('mouseup', handleMouseUp)
+      }
+    }
+  }, [isResizing, columnWidth, resizeStart])
 
   const handleSaveEdit = (groupKey, rowIdx) => {
     if (editingMask !== null) {
@@ -165,7 +221,7 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
           <h2 className="text-2xl font-bold text-gray-900">Gantt Visualization</h2>
           <p className="text-gray-600 text-sm mt-1">
             <span className="inline-block px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium mr-2">Filtered by: {filterColumn}</span>
-            Interactive month-grid showing harvest periods grouped by <strong>{groupingColumnArray.join(' + ')}</strong>
+            Interactive month-grid showing harvest periods ({dynamicMonthCount} months) grouped by <strong>{groupingColumnArray.join(' + ')}</strong>
           </p>
         </div>
         <button
@@ -190,16 +246,6 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
             >
               📅 Month View
             </button>
-            <button
-              onClick={() => setZoomLevel('quarter')}
-              className={`px-4 py-2 rounded-lg font-medium transition ${
-                zoomLevel === 'quarter'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
-              }`}
-            >
-              📊 Quarter View
-            </button>
 
             {cropProcessColumns.length > 0 && (
               <select
@@ -213,53 +259,56 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
             )}
           </div>
 
-          <div className="text-sm text-gray-600">
-            <strong>{groupNames.length}</strong> group{groupNames.length !== 1 ? 's' : ''}
+          <div className="text-sm text-gray-600 space-y-1">
+            <div><strong>{groupNames.length}</strong> group{groupNames.length !== 1 ? 's' : ''}</div>
+            <div className="text-xs text-gray-500">💡 Drag column border to resize</div>
           </div>
         </div>
       </div>
 
       {/* Gantt Table with Dynamic Columns */}
       <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
-        <div className="inline-block min-w-full">
+        <div className="inline-block min-w-full" style={{ cursor: isResizing ? 'col-resize' : 'default' }}>
           {/* Header row */}
           <div className="flex border-b border-gray-300 bg-gray-50">
             {/* Field column headers */}
             {groupingColumnArray.map((col, idx) => (
               <div
                 key={`header-${idx}`}
-                className="font-bold text-gray-900 text-sm border-r border-gray-300 bg-gray-100 flex items-center justify-center"
+                className="font-bold text-gray-900 text-sm border-r border-gray-300 bg-gray-100 flex items-center justify-center relative group"
                 style={{ width: fieldColumnWidth, height: 50 }}
               >
-                {col}
+                <div className="truncate px-2">{col}</div>
+                {idx < groupingColumnArray.length - 1 && (
+                  <div
+                    className="absolute right-0 top-0 bottom-0 w-1 bg-gray-300 hover:bg-blue-500 cursor-col-resize group-hover:bg-blue-500 transition"
+                  ></div>
+                )}
               </div>
             ))}
 
-            {/* Month/Quarter headers */}
-            {Array.from({ length: gridWidth }).map((_, cellIdx) => {
-              if (zoomLevel === 'month') {
-                const month = MONTHS[cellIdx]
-                return (
-                  <div
-                    key={`month-${cellIdx}`}
-                    className="text-center font-semibold text-gray-700 text-sm border-r border-gray-300 bg-gray-100 flex items-center justify-center"
-                    style={{ width: cellWidth, height: 50 }}
-                  >
-                    {month}
-                  </div>
-                )
-              } else {
-                const quarter = `Q${cellIdx + 1}`
-                return (
-                  <div
-                    key={`quarter-${cellIdx}`}
-                    className="text-center font-semibold text-gray-700 text-sm border-r border-gray-300 bg-gray-100 flex items-center justify-center"
-                    style={{ width: cellWidth, height: 50 }}
-                  >
-                    {quarter}
-                  </div>
-                )
-              }
+            {/* Month/Quarter headers - DYNAMIC COUNT */}
+            {Array.from({ length: dynamicMonthCount }).map((_, cellIdx) => {
+              const monthIdx = cellIdx % 12
+              const yearOffset = Math.floor(cellIdx / 12)
+              const month = MONTHS[monthIdx]
+              const label = yearOffset > 0 ? `${month} Y+${yearOffset}` : month
+              
+              return (
+                <div
+                  key={`month-${cellIdx}`}
+                  className="text-center font-semibold text-gray-700 text-xs border-r border-gray-300 bg-gray-100 flex items-center justify-center relative group select-none"
+                  style={{ width: columnWidth, height: 50, minWidth: columnWidth }}
+                >
+                  {label}
+                  {cellIdx < dynamicMonthCount - 1 && (
+                    <div
+                      className="absolute right-0 top-0 bottom-0 w-1 bg-gray-300 hover:bg-blue-500 cursor-col-resize group-hover:bg-blue-500 transition"
+                      onMouseDown={handleMouseDown}
+                    ></div>
+                  )}
+                </div>
+              )
             })}
           </div>
 
@@ -291,21 +340,22 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
                   </div>
                 ))}
 
-                {/* Gantt bars */}
+                {/* Gantt bars - DYNAMIC MONTH COUNT */}
                 {groupRecords.map((record, recordIdx) => (
                   <div
                     key={`${groupKey}-bar-${recordIdx}`}
-                    className="relative border-r border-gray-200 flex items-center"
-                    style={{ width: cellWidth * gridWidth, height: cellHeight }}
+                    className="relative flex items-center bg-white"
+                    style={{ width: columnWidth * dynamicMonthCount, height: cellHeight, minWidth: columnWidth * dynamicMonthCount }}
                     onMouseEnter={() => setHoveredRow(`${groupKey}-${recordIdx}`)}
                     onMouseLeave={() => setHoveredRow(null)}
                   >
-                    {/* Grid lines */}
+                    {/* Grid lines for each month */}
                     <div className="absolute inset-0 flex">
-                      {Array.from({ length: gridWidth }).map((_, i) => (
+                      {Array.from({ length: dynamicMonthCount }).map((_, i) => (
                         <div
                           key={i}
                           className="flex-1 border-r border-gray-100"
+                          style={{ width: columnWidth }}
                         ></div>
                       ))}
                     </div>
@@ -314,15 +364,28 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
                     <div className="absolute inset-0 flex items-center p-1">
                       {record.month_mask ? (
                         extractMonthRanges(record.month_mask).map((range, rangeIdx) => {
-                          const startCell = zoomLevel === 'month' 
-                            ? range.start 
-                            : Math.floor(range.start / 3)
-                          const endCell = zoomLevel === 'month' 
-                            ? range.end 
-                            : Math.floor(range.end / 3)
+                          let startMonth = range.start
+                          let endMonth = range.end
                           
-                          const barWidth = (endCell - startCell + 1) * cellWidth - 8
-                          const barLeft = startCell * cellWidth + 4
+                          // If wrapped, we need to show it across year boundary
+                          if (range.wrapped) {
+                            // Dec to Nov of next year would be shown
+                            endMonth = 11 + (dynamicMonthCount > 12 ? range.start : 0)
+                          }
+                          
+                          // Handle year-wrapping visualization
+                          let barStart = startMonth
+                          let barEnd = endMonth
+                          
+                          if (range.isWrapped && dynamicMonthCount > 12) {
+                            // This is the Jan part of Dec-Jan wrap
+                            barStart = 12 // Start of next year's Jan
+                            barEnd = 12 + range.end
+                          }
+                          
+                          const barWidth = (barEnd - barStart + 1) * columnWidth - 8
+                          const barLeft = barStart * columnWidth + 4
+                          
                           const dateRange = formatDateRange(range.start, range.end)
 
                           return (
@@ -335,7 +398,8 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
                                 width: barWidth,
                                 left: barLeft,
                                 top: '50%',
-                                transform: 'translateY(-50%)'
+                                transform: 'translateY(-50%)',
+                                minWidth: 40
                               }}
                               onClick={() => {
                                 setEditingRowId(`${groupKey}-${recordIdx}`)
@@ -365,13 +429,13 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
                           {Object.entries(record).map(([key, val]) => {
                             if (key.startsWith('_') || key === 'month_mask' || key === 'parsed_data') return null
                             return (
-                              <div key={key}>
+                              <div key={key} className="text-xs">
                                 <span className="font-medium">{key}:</span> {String(val).substring(0, 30)}
                               </div>
                             )
                           })}
                           {record.month_mask && (
-                            <div>
+                            <div className="text-xs">
                               <span className="font-medium">Mask:</span> {record.month_mask.toString(2).padStart(12, '0')}
                             </div>
                           )}
@@ -442,7 +506,10 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
       {/* Info footer */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 space-y-2">
         <p className="text-blue-900 text-sm">
-          💡 <strong>Tip:</strong> Click on any harvest bar to edit the month mask. Hover to see date ranges (e.g., Jan 02 - Feb 04) and full row details.
+          💡 <strong>Column widths:</strong> Drag the border between any two month columns to resize. Columns expand automatically based on your data's maximum span.
+        </p>
+        <p className="text-blue-900 text-sm">
+          📅 <strong>Dynamic months:</strong> Showing {dynamicMonthCount} months. If data spans across year boundary (Dec→Feb), months display as "Jan Y+1", "Feb Y+1", etc.
         </p>
         {cropProcessColumns.length > 0 && (
           <p className="text-blue-900 text-sm">
