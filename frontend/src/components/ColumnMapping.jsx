@@ -227,6 +227,10 @@ export default function ColumnMapping({ uploadId, onMappingComplete, onBack }) {
                     <option value="start_date">📍 Start Date/Month</option>
                     <option value="end_date">📍 End Date/Month</option>
                   </optgroup>
+                  <optgroup label="Temporal Metadata">
+                    <option value="allYear">🔄 All Year (Year-Round)</option>
+                    <option value="currentYear">📆 Current Year</option>
+                  </optgroup>
                 </select>
               </div>
             </div>

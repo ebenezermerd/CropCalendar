@@ -88,6 +88,14 @@ COLUMN_KEYWORDS = {
     'end_date': [
         'end', 'end date', 'to date', 'finish', 'finish date', 'complete',
         'end month', 'harvest', 'harvest date', 'completion', 'deadline'
+    ],
+    'allYear': [
+        'all year', 'allyear', 'year round', 'year-round', 'perennial', 'continuous',
+        'all months', 'always', 'permanent', 'annual crop'
+    ],
+    'currentYear': [
+        'year', 'current year', 'year data', 'data year', 'year reference', 'harvest year',
+        'year identifier', 'year of', 'year value', 'season year'
     ]
 }
 

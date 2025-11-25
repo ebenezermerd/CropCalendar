@@ -34,11 +34,12 @@ Advanced column mapping with auto-detection, confidence scoring, and user config
 - `GET /api/health` - Health check
 
 ### Auto-Detection System
-- 6 agricultural column types identified
+- 9 column types identified (agricultural + temporal metadata)
 - Keyword-based matching with confidence scoring (0.0-1.0)
 - Value analysis for month/date patterns
 - Threshold filtering (0.3+ confidence)
 - Sample values display for user reference
+- **New**: allYear & currentYear metadata types for crop seasonality
 
 ### Column Mapping System (NEW)
 - Interactive dropdown mapping interface
