@@ -160,11 +160,20 @@ const captureFullTable = async (elementId, scale = 2) => {
   const originalOverflows = new Map()
 
   try {
-    // Step 1: Remove overflow clipping from all divs to allow text to render
+    // Step 1: Remove overflow clipping and fix text positioning issues
     allDivs.forEach(div => {
       const original = div.style.overflow
       originalOverflows.set(div, original)
       div.style.overflow = 'visible'
+      
+      // Fix flex alignment: ensure text doesn't get vertically squeezed
+      div.style.alignItems = 'center'
+      div.style.justifyContent = 'flex-start'
+      
+      // Ensure proper line height for text
+      if (div.style.height && div.style.height.includes('px')) {
+        div.style.lineHeight = '1.2'
+      }
     })
 
     // Step 2: Get dimensions with overflow visible
@@ -193,10 +202,23 @@ const captureFullTable = async (elementId, scale = 2) => {
     wrapper.style.overflow = 'visible'
     wrapper.style.zIndex = '-9999'
 
-    // Clone the table with overflow visible
+    // Clone the table with overflow visible and fixed alignment
     const clone = innerContainer.cloneNode(true)
     clone.querySelectorAll('div').forEach(div => {
       div.style.overflow = 'visible'
+      div.style.alignItems = 'center'
+      div.style.justifyContent = 'flex-start'
+      if (div.style.height && div.style.height.includes('px')) {
+        div.style.lineHeight = '1.2'
+      }
+      
+      // Fix spans and text nodes to prevent clipping
+      const spans = div.querySelectorAll('span')
+      spans.forEach(span => {
+        span.style.display = 'inline-block'
+        span.style.lineHeight = '1.4'
+        span.style.verticalAlign = 'middle'
+      })
     })
     wrapper.appendChild(clone)
     document.body.appendChild(wrapper)
@@ -220,10 +242,21 @@ const captureFullTable = async (elementId, scale = 2) => {
 
     return canvas
   } finally {
-    // Restore original overflow styles
+    // Restore original styles
     allDivs.forEach(div => {
       const original = originalOverflows.get(div)
       div.style.overflow = original || ''
+      // Reset alignment and line-height
+      div.style.alignItems = ''
+      div.style.justifyContent = ''
+      div.style.lineHeight = ''
+      
+      // Reset spans
+      div.querySelectorAll('span').forEach(span => {
+        span.style.display = ''
+        span.style.lineHeight = ''
+        span.style.verticalAlign = ''
+      })
     })
 
     // Restore container styles

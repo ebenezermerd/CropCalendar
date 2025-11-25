@@ -137,7 +137,7 @@ export default function ExportPanel({
   }
 
   const formatOptions = [
-    { value: 'excel', label: '📊 Excel - Professional table with column selection', icon: '📊' },
+    { value: 'excel', label: '📊 Excel - Professional table', icon: '📊' },
     { value: 'png', label: '🖼️ PNG - Full table image (entire width)', icon: '🖼️' },
     { value: 'jpg', label: '📸 JPG - Compressed image (entire width)', icon: '📸' },
     { value: 'pdf', label: '📄 PDF - Multi-page document (entire table)', icon: '📄' },
