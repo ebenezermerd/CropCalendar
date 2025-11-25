@@ -536,6 +536,213 @@ def save_column_mappings(upload_id: str, mappings: Dict[str, str]):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+# ==================== PARSING & NORMALIZATION ====================
+
+def parse_month_string(value: str) -> Tuple[int, bool, str]:
+    """
+    Parse month/season string and return (month_mask, requires_review, parsed_months).
+    
+    Handles: Jan-Mar, Mar-May, 3-5, January, Mar, May, All year, etc.
+    month_mask: 12-bit integer where bit i=1 means month i is active
+    """
+    if not value or pd.isna(value):
+        return 0, True, "unknown"
+    
+    value = str(value).strip().lower()
+    
+    # Check for "all year" / perennial indicators
+    if any(x in value for x in ['all year', 'allyear', 'year round', 'year-round', 'perennial', '12', 'permanent']):
+        return 4095, False, "all year"  # 111111111111 in binary
+    
+    month_mask = 0
+    requires_review = False
+    parsed_months = []
+    
+    # Try range patterns (e.g., "Jan - Mar", "3-5", "January to February")
+    range_patterns = [
+        (r'(\w+)\s*(?:to|-|through)\s*(\w+)', 'range'),
+        (r'(\d+)\s*(?:to|-|through)\s*(\d+)', 'range_num'),
+    ]
+    
+    for pattern, ptype in range_patterns:
+        match = re.search(pattern, value, re.IGNORECASE)
+        if match:
+            start_str, end_str = match.groups()
+            
+            # Convert to month numbers
+            if ptype == 'range_num':
+                try:
+                    start_month = int(start_str)
+                    end_month = int(end_str)
+                except:
+                    continue
+            else:
+                start_month = MONTH_NAMES.get(start_str.lower()[:3], None)
+                end_month = MONTH_NAMES.get(end_str.lower()[:3], None)
+            
+            if start_month and end_month:
+                # Handle wraparound (e.g., Oct-Feb)
+                if start_month <= end_month:
+                    for m in range(start_month, end_month + 1):
+                        month_mask |= (1 << (m - 1))
+                        if m not in parsed_months:
+                            parsed_months.append(m)
+                else:
+                    # Wraparound (e.g., Oct=10 to Feb=2)
+                    for m in range(start_month, 13):
+                        month_mask |= (1 << (m - 1))
+                        if m not in parsed_months:
+                            parsed_months.append(m)
+                    for m in range(1, end_month + 1):
+                        month_mask |= (1 << (m - 1))
+                        if m not in parsed_months:
+                            parsed_months.append(m)
+                break
+    
+    # Try individual month patterns (e.g., "Jan", "May", "Aug")
+    if month_mask == 0:
+        individual_months = re.findall(r'\b(\w{3,})\b', value)
+        for month_str in individual_months:
+            month_num = MONTH_NAMES.get(month_str.lower()[:3], None)
+            if month_num:
+                month_mask |= (1 << (month_num - 1))
+                if month_num not in parsed_months:
+                    parsed_months.append(month_num)
+    
+    # Try numeric month patterns (e.g., "1,3,5" or "2, 4, 6")
+    if month_mask == 0:
+        numeric_matches = re.findall(r'\b(\d{1,2})\b', value)
+        valid_months = []
+        for match in numeric_matches:
+            month_num = int(match)
+            if 1 <= month_num <= 12:
+                month_mask |= (1 << (month_num - 1))
+                valid_months.append(month_num)
+        parsed_months = sorted(valid_months)
+    
+    # Generate month names string
+    if parsed_months:
+        month_names_list = []
+        for m in sorted(set(parsed_months)):
+            for name, num in MONTH_NAMES.items():
+                if num == m and len(name) >= 3:
+                    month_names_list.append(name.capitalize())
+                    break
+        parsed_months_str = ", ".join(month_names_list)
+    else:
+        parsed_months_str = "unparseable"
+        requires_review = True
+    
+    return month_mask, requires_review, parsed_months_str
+
+@app.post("/api/upload/{upload_id}/parse")
+def parse_and_normalize_data(upload_id: str):
+    """
+    Parse entire file with configured column mappings.
+    Extract month information and generate month_mask.
+    Flag rows requiring manual review.
+    """
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        
+        # Get upload and mappings
+        c.execute(
+            "SELECT path, columns_json, total_rows FROM uploads WHERE upload_id = ?",
+            (upload_id,)
+        )
+        row = c.fetchone()
+        
+        if not row:
+            conn.close()
+            raise HTTPException(status_code=404, detail="Upload not found")
+        
+        file_path, mappings_json, total_rows = row
+        mappings = json.loads(mappings_json)
+        
+        # Read file
+        df, _ = read_file_to_dataframe(file_path)
+        
+        # Parse records
+        parsed_records = []
+        stats = {
+            'total_parsed': 0,
+            'successful': 0,
+            'manual_review': 0,
+            'errors': 0
+        }
+        
+        for idx, raw_row in df.iterrows():
+            try:
+                # Build normalized record
+                normalized = {}
+                requires_review = False
+                review_reason = None
+                
+                for col_name, col_type in mappings.items():
+                    if col_type == 'ignore':
+                        continue
+                    
+                    value = raw_row.get(col_name)
+                    
+                    # Handle specific types
+                    if col_type == 'harvest_calendar':
+                        month_mask, needs_review, parsed_months = parse_month_string(value)
+                        normalized['month_mask'] = month_mask
+                        normalized['parsed_months'] = parsed_months
+                        if needs_review:
+                            requires_review = True
+                            review_reason = f"Could not parse: {value}"
+                    
+                    else:
+                        normalized[col_type] = str(value) if pd.notna(value) else None
+                
+                # Store record
+                record_data = {
+                    'row_number': idx + 1,
+                    'requires_review': requires_review,
+                    'review_reason': review_reason,
+                    **normalized
+                }
+                parsed_records.append(record_data)
+                
+                # Store in database
+                c.execute("""
+                    INSERT INTO records (upload_id, row_number, raw_json, month_mask)
+                    VALUES (?, ?, ?, ?)
+                """, (
+                    upload_id,
+                    idx + 1,
+                    json.dumps(dict(raw_row)),
+                    normalized.get('month_mask', 0)
+                ))
+                
+                stats['total_parsed'] += 1
+                if requires_review:
+                    stats['manual_review'] += 1
+                else:
+                    stats['successful'] += 1
+                    
+            except Exception as e:
+                stats['errors'] += 1
+                continue
+        
+        conn.commit()
+        conn.close()
+        
+        return {
+            "success": True,
+            "upload_id": upload_id,
+            "stats": stats,
+            "sample_records": parsed_records[:5],
+            "message": f"Parsed {stats['total_parsed']} records"
+        }
+        
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 if __name__ == "__main__":
     import uvicorn

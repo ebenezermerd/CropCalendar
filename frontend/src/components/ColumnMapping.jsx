@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
+import { Toaster, toast } from 'sonner'
 
 export default function ColumnMapping({ uploadId, onMappingComplete, onBack }) {
   const [loading, setLoading] = useState(true)
@@ -89,10 +90,21 @@ export default function ColumnMapping({ uploadId, onMappingComplete, onBack }) {
       )
       
       if (response.data.success) {
-        onMappingComplete(mappings)
+        toast.success('Column mappings saved successfully!', {
+          description: `${Object.keys(mappings).length} columns configured`,
+          duration: 3000
+        })
+        setTimeout(() => {
+          onMappingComplete(mappings)
+        }, 500)
       }
     } catch (err) {
-      setError(err.response?.data?.detail || 'Failed to save mappings')
+      const errorMsg = err.response?.data?.detail || 'Failed to save mappings'
+      setError(errorMsg)
+      toast.error('Failed to save mappings', {
+        description: errorMsg,
+        duration: 4000
+      })
     } finally {
       setSaving(false)
     }
@@ -140,6 +152,7 @@ export default function ColumnMapping({ uploadId, onMappingComplete, onBack }) {
 
   return (
     <div className="space-y-6">
+      <Toaster position="top-right" theme="light" />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
