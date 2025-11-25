@@ -1,0 +1,19 @@
+Crop,Country,Region,Sowing_Month,Harvest_Month,Growing_Period,Yield_Potential
+Sesame,Sudan,Kassala,June,November,Jun-Nov,2.5
+Sesame,Sudan,Darfur,July,December,Jul-Dec,2.2
+Sorghum,Sudan,North,July,January,Jul-Jan,2.8
+Wheat,Sudan,Gedaref,November,April,Nov-Apr,2.0
+Millet,Sudan,Kordofan,June,October,Jun-Oct,1.8
+Chickpea,Sudan,Blue Nile,November,March,Nov-Mar,1.9
+Lentil,Sudan,Gedaref,November,April,Nov-Apr,1.7
+Maize,Sudan,South,May,September,May-Sep,3.5
+Groundnut,Sudan,Darfur,June,November,Jun-Nov,2.1
+Cotton,Sudan,Gezira,June,January,Jun-Jan,3.2
+Sesame,Ethiopia,Amhara,Jul,Dec,Jul-Dec,2.6
+Sorghum,Ethiopia,Oromia,Aug,Jan,Aug-Jan,2.9
+Wheat,Ethiopia,SNNPR,Nov,Apr,Nov-Apr,2.1
+Teff,Ethiopia,Amhara,Jul,Oct,Jul-Oct,1.5
+Barley,Ethiopia,Oromia,Nov,Mar,Nov-Mar,1.8
+Coffee,Ethiopia,SNNPR,Jan,Dec,All Year,4.5
+Maize,Ethiopia,Oromia,Mar,Aug,Mar-Aug,3.8
+Pulses,Ethiopia,Amhara,Sep,Feb,Sep-Feb,2.2
