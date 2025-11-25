@@ -1,13 +1,16 @@
 # Crop Calendar Gantt Export Tool
 
-## 🎯 Project Status: FUNCTIONALITY 1 COMPLETE ✅
+## 🎯 Project Status: FUNCTIONALITY 2 COMPLETE ✅
 
-### FILE UPLOAD & PREVIEW - FULLY IMPLEMENTED
+### FILE UPLOAD & PREVIEW (FUNCTIONALITY 1) - COMPLETE ✅
 Professional, production-ready file upload and data preview system.
 
-**Frontend:** Professional React + Tailwind UI with drag-drop, file validation, progress tracking
-**Backend:** FastAPI with intelligent column auto-detection system
-**Database:** SQLite for upload tracking and metadata
+### COLUMN MAPPING & CUSTOMIZATION (FUNCTIONALITY 2) - COMPLETE ✅
+Advanced column mapping with auto-detection, confidence scoring, and user configuration.
+
+**Frontend:** Professional React + Tailwind UI with drag-drop, file validation, progress tracking, column mapper
+**Backend:** FastAPI with intelligent column auto-detection + mapping endpoints
+**Database:** SQLite for upload tracking, metadata, and user-configured mappings
 
 ---
 
@@ -17,27 +20,40 @@ Professional, production-ready file upload and data preview system.
 1. **FileUpload.jsx** - Drag-drop interface with upload progress
 2. **PreviewTable.jsx** - Data preview with color-coded column types
 3. **UploadStatus.jsx** - Upload summary with file metadata
-4. **UploadPage.jsx** - Complete upload workflow
-5. **App.jsx** - Application root with routing
+4. **UploadPage.jsx** - Complete upload workflow with next button
+5. **ColumnMapping.jsx** - Advanced column mapper with dropdowns (NEW)
+6. **App.jsx** - Application root with multi-step routing
 
 ### Backend Features
 - `POST /api/upload` - File upload with preview and auto-detection
 - `GET /api/upload/{id}` - Retrieve upload info
 - `GET /api/upload/{id}/preview` - Extended preview
 - `POST /api/upload/{id}/detect-columns` - Re-run detection
+- `GET /api/upload/{id}/column-mapping` - Column mapping UI with confidence scores (NEW)
+- `POST /api/upload/{id}/save-mappings` - Save user-configured mappings (NEW)
 - `GET /api/health` - Health check
 
 ### Auto-Detection System
 - 6 agricultural column types identified
-- Keyword-based matching with confidence scoring
+- Keyword-based matching with confidence scoring (0.0-1.0)
 - Value analysis for month/date patterns
 - Threshold filtering (0.3+ confidence)
+- Sample values display for user reference
+
+### Column Mapping System (NEW)
+- Interactive dropdown mapping interface
+- 20-row data preview for verification
+- Auto-detection with confidence badges (green/yellow/gray)
+- "Ignore" option to exclude columns from output
+- Auto-Detect button to refresh heuristics
+- Save mappings to database with validation
 
 ### File Handling
 - CSV, XLSX, XLS, XML support
 - File validation (type + 50MB size limit)
 - Error handling with user-friendly messages
 - SQLite metadata storage
+- Full row count and column information
 
 ---
 
@@ -145,22 +161,23 @@ Growing_Period → harvest_calendar ✅
 
 ## 📋 Next Features to Build
 
-1. **Column Mapper** - Allow users to override auto-detection (next priority)
-2. **Full File Parser** - Parse entire file with month normalization
-3. **Group Selector** - Filter by crop name, country, etc.
-4. **Gantt Viewer** - Interactive month-grid visualization
-5. **Export Options** - Excel, PNG, PDF, LZL, JSON
+1. **Data Parsing & Normalization** - Parse entire file with month normalization (FUNCTIONALITY 3)
+2. **Group Selector** - Filter by crop name, country, etc. (FUNCTIONALITY 4)
+3. **Gantt Viewer** - Interactive month-grid visualization (FUNCTIONALITY 5)
+4. **Export Options** - Excel, PNG, PDF, LZL, JSON (FUNCTIONALITY 6)
 
-All groundwork is complete and next features will build seamlessly on this foundation.
+All groundwork is complete. FUNCTIONALITY 2 (Column Mapping) adds mapping persistence and validation. Next features will build seamlessly on this foundation.
 
 ---
 
 ## 💡 Key Design Decisions
 
 - **Server-side auto-detection**: More reliable than client-side
+- **Confidence scoring**: Heuristic-based (header + value analysis) for intelligent suggestions
 - **SQLite storage**: Simple, built-in, good for MVP
 - **Flexible schema**: Store original + normalized data
-- **Confidence-based detection**: Only suggest types with >0.3 confidence
+- **Confidence threshold**: Only suggest types with >0.3 confidence
+- **User override**: All mappings can be customized via UI dropdowns
 - **Client-side validation**: Immediate feedback before upload
 - **Professional UI**: Tailwind CSS for consistency and polish
 
@@ -168,11 +185,21 @@ All groundwork is complete and next features will build seamlessly on this found
 
 ## 🔗 API Documentation
 
-See `FUNCTIONALITY_1_COMPLETE.md` for detailed API documentation with examples.
+- `FUNCTIONALITY_1_COMPLETE.md` - File Upload & Preview API
+- `FUNCTIONALITY_2_COMPLETE.md` - Column Mapping & Customization API (NEW)
 
 ---
 
 **Status:** ✅ COMPLETE & READY FOR NEXT FEATURE
 
-The FILE UPLOAD & PREVIEW system is production-ready and fully documented.
-Ready to proceed with FUNCTIONALITY 2: Column Mapping & Customization.
+Both FUNCTIONALITY 1 (FILE UPLOAD & PREVIEW) and FUNCTIONALITY 2 (COLUMN MAPPING) are production-ready and fully documented.
+
+### What Users Can Do Now:
+1. Upload agricultural data files (CSV, XLSX, XLS, XML)
+2. See data preview with first 10 rows
+3. Review auto-detected column types with confidence %
+4. Configure column mappings with dropdowns
+5. Preview first 20 rows while mapping
+6. Save finalized mappings
+
+Ready to proceed with FUNCTIONALITY 3: Data Parsing & Normalization.
