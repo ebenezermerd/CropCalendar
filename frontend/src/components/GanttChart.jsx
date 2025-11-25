@@ -59,14 +59,15 @@ function getColorForGroup(index, groupName) {
   return COLORS[index % COLORS.length]
 }
 
-export default function GanttChart({ filterResults, onBack }) {
+export default function GanttChart({ filterResults, groupingColumn, onBack }) {
   const [zoomLevel, setZoomLevel] = useState('month') // 'month' or 'quarter'
   const [editingRowId, setEditingRowId] = useState(null)
   const [editingMask, setEditingMask] = useState(null)
   const [hoveredRow, setHoveredRow] = useState(null)
 
   const records = filterResults?.records || []
-  const columnName = filterResults?.filter?.column
+  const filterColumn = filterResults?.filter?.column
+  const columnName = groupingColumn // Use the selected grouping column, not the filter column
   
   // Group records by their grouping column value
   const groupedRecords = useMemo(() => {
@@ -116,7 +117,8 @@ export default function GanttChart({ filterResults, onBack }) {
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Gantt Visualization</h2>
           <p className="text-gray-600 text-sm mt-1">
-            Interactive month-grid showing harvest periods grouped by {columnName}
+            <span className="inline-block px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs font-medium mr-2">Filtered by: {filterColumn}</span>
+            Interactive month-grid showing harvest periods grouped by <strong>{columnName}</strong>
           </p>
         </div>
         <button

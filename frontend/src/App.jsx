@@ -3,6 +3,7 @@ import UploadPage from './pages/UploadPage'
 import ColumnMapping from './components/ColumnMapping'
 import ParsingResults from './components/ParsingResults'
 import GroupSelector from './components/GroupSelector'
+import GanttColumnSelector from './components/GanttColumnSelector'
 import GanttChart from './components/GanttChart'
 import './App.css'
 
@@ -50,8 +51,21 @@ function App() {
     setCurrentStep('parsing')
   }
 
-  const handleBackFromGantt = () => {
+  const handleBackFromColumnSelection = () => {
     setCurrentStep('filtering')
+  }
+
+  const handleGanttColumnSelect = (column) => {
+    // Column selected for Gantt grouping
+    setUploadData(prev => ({
+      ...prev,
+      gantt_grouping_column: column
+    }))
+    setCurrentStep('gantt')
+  }
+
+  const handleBackFromGantt = () => {
+    setCurrentStep('gantt-column-selection')
   }
 
   const handleFilterApply = (filterResults) => {
@@ -60,7 +74,7 @@ function App() {
       ...prev,
       filter_results: filterResults
     }))
-    setCurrentStep('gantt')
+    setCurrentStep('gantt-column-selection')
   }
 
   return (
@@ -104,11 +118,23 @@ function App() {
           </div>
         </div>
       )}
-      {currentStep === 'gantt' && uploadData?.filter_results && (
+      {currentStep === 'gantt-column-selection' && uploadData?.filter_results && (
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+          <div className="max-w-7xl mx-auto px-4 py-12">
+            <GanttColumnSelector
+              filterResults={uploadData.filter_results}
+              onColumnSelect={handleGanttColumnSelect}
+              onBack={handleBackFromColumnSelection}
+            />
+          </div>
+        </div>
+      )}
+      {currentStep === 'gantt' && uploadData?.filter_results && uploadData?.gantt_grouping_column && (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
           <div className="max-w-full mx-auto px-4 py-12">
             <GanttChart
               filterResults={uploadData.filter_results}
+              groupingColumn={uploadData.gantt_grouping_column}
               onBack={handleBackFromGantt}
             />
           </div>

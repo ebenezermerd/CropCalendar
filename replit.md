@@ -1,6 +1,6 @@
 # Crop Calendar Gantt Export Tool
 
-## 🎯 Project Status: FUNCTIONALITY 5 COMPLETE ✅
+## 🎯 Project Status: FUNCTIONALITY 5 COMPLETE ✅ (with Gantt Column Selection)
 
 ### FILE UPLOAD & PREVIEW (FUNCTIONALITY 1) - COMPLETE ✅
 Professional, production-ready file upload and data preview system.
@@ -15,11 +15,11 @@ Robust month/season extraction with 12-bit month masks, manual review flagging, 
 Column-based filtering with fuzzy search, bulk selection, and filtered results with parsed data.
 
 ### INTERACTIVE GANTT VIEW (FUNCTIONALITY 5) - COMPLETE ✅
-Month-grid visualization with interactive rectangles, zoom controls, hover tooltips, and inline editing.
+Gantt column selection + Month-grid visualization with interactive rectangles, zoom controls, hover tooltips, and inline editing.
 
-**Frontend:** Professional React + Tailwind UI with drag-drop, file validation, progress tracking, column mapper, parsing UI, toast notifications
-**Backend:** FastAPI with intelligent column auto-detection, mapping endpoints, robust month/season parsing with month_mask generation
-**Database:** SQLite for upload tracking, metadata, user-configured mappings, and normalized parsed records
+**Frontend:** Professional React + Tailwind UI with drag-drop, file validation, progress tracking, column mapper, parsing UI, flexible Gantt grouping, toast notifications
+**Backend:** FastAPI with intelligent column auto-detection, mapping endpoints, robust month/season parsing with month_mask generation, filter endpoints
+**Database:** SQLite for upload tracking, metadata, user-configured mappings, normalized parsed records, filter results
 
 ---
 
@@ -33,8 +33,9 @@ Month-grid visualization with interactive rectangles, zoom controls, hover toolt
 5. **ColumnMapping.jsx** - Advanced column mapper with dropdowns & toast notifications
 6. **ParsingResults.jsx** - Parsing UI with progress, stats, manual review flags
 7. **GroupSelector.jsx** - Column selector, fuzzy search, bulk selection, filtering
-8. **GanttChart.jsx** - Interactive Gantt visualization with zoom, tooltips, inline editing (NEW)
-9. **App.jsx** - Application root with 5-step routing (upload → mapping → parsing → filtering → gantt)
+8. **GanttColumnSelector.jsx** - Beautiful column selector for Gantt grouping (NEW)
+9. **GanttChart.jsx** - Interactive Gantt visualization with zoom, tooltips, inline editing
+10. **App.jsx** - Application root with 6-step routing (upload → mapping → parsing → filtering → column-selection → gantt)
 
 ### Backend Features
 - `POST /api/upload` - File upload with preview and auto-detection
@@ -83,8 +84,16 @@ Month-grid visualization with interactive rectangles, zoom controls, hover toolt
 - User selects values and system filters matching rows
 - Results include both raw and parsed data with month masks
 
-### Interactive Gantt View System (NEW)
-- **Month-grid visualization**: 12 months on X-axis, countries/groups on Y-axis
+### Gantt Column Selection System (NEW)
+- **Beautiful column selector**: Grid-based selection of grouping columns
+- **Unique value preview**: Shows how many unique values will appear as rows
+- **Flexible grouping**: Same filtered data can be grouped different ways
+- **Seamless UX**: Toast notifications showing what will be grouped
+- **All columns available**: Any non-hidden column can be used for grouping
+
+### Interactive Gantt View System (UPDATED)
+- **Month-grid visualization**: 12 months on X-axis, grouped records on Y-axis
+- **Dynamic grouping**: Uses selected column to group records (Country, Crop, Region, etc.)
 - **Visual rectangles**: Generated from 12-bit month_mask with color coding per group
 - **Year-end wrapping**: Handles Dec-Jan spans (displays as two separate rectangles when needed)
 - **Hover tooltips**: Full row data, source row index, month range display
@@ -92,6 +101,7 @@ Month-grid visualization with interactive rectangles, zoom controls, hover toolt
 - **Color assignment**: Unique colors per group for visual distinction
 - **Inline editing**: Click bars to open modal, toggle months, save updated month_mask
 - **Interactive feedback**: Hover effects, toast notifications on save
+- **Filter + Grouping display**: Shows both filter column and grouping column in header
 
 ### File Handling
 - CSV, XLSX, XLS, XML support
@@ -260,11 +270,37 @@ All five functionalities are fully implemented:
 12. Search and filter unique values with fuzzy matching
 13. Bulk-select or deselect all values
 14. Get filtered results with both raw and parsed data
-15. View interactive Gantt chart with month-grid visualization
-16. See harvest periods as colored rectangles grouped by country/crop
-17. Zoom between month and quarter views for different perspectives
-18. Hover over bars to see full row data and source index
-19. Click bars to inline edit month masks for manual corrections
-20. Toggle between different grouping columns for various analyses
+15. **Choose any column to group by in Gantt visualization** ← NEW
+16. See how many unique values will appear as rows
+17. View interactive Gantt chart with month-grid visualization
+18. See harvest periods as colored rectangles, grouped by chosen column
+19. Each group (country, region, crop, etc.) appears as a row with unique color
+20. Multiple records in same group show as separate bars
+21. Zoom between month and quarter views for different perspectives
+22. Hover over bars to see full row data and source index
+23. Click bars to inline edit month masks for manual corrections
+24. Display shows both filter criteria and grouping column
 
 Ready to proceed with FUNCTIONALITY 6: Export Options (Excel, PNG, PDF, LZL, JSON).
+
+---
+
+## 🔄 Complete Workflow
+
+```
+STEP 1: Upload Data File
+   ↓
+STEP 2: Auto-Detect & Map Columns (9 types)
+   ↓
+STEP 3: Parse Months & Generate Masks
+   ↓
+STEP 4: Filter by Any Column (Crop, Country, etc.)
+   ↓
+STEP 5: Select Grouping Column for Gantt ← NEW!
+   ↓
+STEP 6: View Interactive Gantt with Colored Bars
+         - Each group as a row
+         - Multiple records show separate bars
+         - Hover for details, click to edit
+         - Zoom month/quarter view
+```
