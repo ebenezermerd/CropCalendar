@@ -371,108 +371,82 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
                     <div className="absolute inset-0 flex items-center p-1">
                       {record.month_mask ? (
                         (() => {
-                          const ranges = extractMonthRanges(record.month_mask)
+                          const allRanges = extractMonthRanges(record.month_mask)
+                          const pairedRange = allRanges.find(r => r.isWrapped)
                           
-                          // Find wrapped ranges and their paired isWrapped ranges
-                          const wrappedIndexMap = {}
-                          ranges.forEach((range, idx) => {
-                            if (range.wrapped) {
-                              // Find the paired isWrapped range
-                              const pairedIdx = ranges.findIndex(r => r.isWrapped)
-                              if (pairedIdx !== -1) {
-                                wrappedIndexMap[idx] = pairedIdx
-                              }
-                            }
-                          })
+                          // Filter to render only: wrapped ranges (with extension) + normal ranges
+                          // Skip: isWrapped ranges (they're part of wrapped)
+                          const rangesToRender = allRanges.filter(range => !range.isWrapped)
                           
-                          // Only render wrapped and non-wrapped ranges, skip isWrapped (they're part of wrapped)
-                          return ranges.map((range, rangeIdx) => {
-                            // Skip isWrapped ranges - they're rendered as part of the wrapped range
-                            if (range.isWrapped) {
-                              return null
+                          return rangesToRender.map((range, renderIdx) => {
+                            if (range.wrapped && pairedRange && dynamicMonthCount > 12) {
+                              // Wrapped range with pairing - extend to Year 2
+                              const startMonth = range.start
+                              const endMonth = 12 + pairedRange.end
+                              const barWidth = (endMonth - startMonth + 1) * columnWidth - 8
+                              const barLeft = startMonth * columnWidth + 4
+                              const dateRange = record.period || formatDateRange(range.start, range.end)
+                              
+                              return (
+                                <div
+                                  key={renderIdx}
+                                  className="absolute h-8 rounded shadow-sm hover:shadow-md transition cursor-pointer group"
+                                  style={{
+                                    backgroundColor: getColorForGroup(groupIdx),
+                                    opacity: hoveredRow === `${groupKey}-${recordIdx}` ? 1 : 0.7,
+                                    width: barWidth,
+                                    left: barLeft,
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    minWidth: 40
+                                  }}
+                                  onClick={() => {
+                                    setEditingRowId(`${groupKey}-${recordIdx}`)
+                                    setEditingMask(record.month_mask)
+                                  }}
+                                >
+                                  {hoveredRow === `${groupKey}-${recordIdx}` && (
+                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-gray-900 text-white text-xs p-2 rounded whitespace-nowrap z-10 pointer-events-none">
+                                      {dateRange} (wraps year)
+                                    </div>
+                                  )}
+                                </div>
+                              )
+                            } else if (!range.wrapped) {
+                              // Normal non-wrapped range
+                              const barStart = range.start
+                              const barEnd = range.end
+                              const barWidth = (barEnd - barStart + 1) * columnWidth - 8
+                              const barLeft = barStart * columnWidth + 4
+                              const dateRange = record.period || formatDateRange(range.start, range.end)
+                              
+                              return (
+                                <div
+                                  key={renderIdx}
+                                  className="absolute h-8 rounded shadow-sm hover:shadow-md transition cursor-pointer group"
+                                  style={{
+                                    backgroundColor: getColorForGroup(groupIdx),
+                                    opacity: hoveredRow === `${groupKey}-${recordIdx}` ? 1 : 0.7,
+                                    width: barWidth,
+                                    left: barLeft,
+                                    top: '50%',
+                                    transform: 'translateY(-50%)',
+                                    minWidth: 40
+                                  }}
+                                  onClick={() => {
+                                    setEditingRowId(`${groupKey}-${recordIdx}`)
+                                    setEditingMask(record.month_mask)
+                                  }}
+                                >
+                                  {hoveredRow === `${groupKey}-${recordIdx}` && (
+                                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-gray-900 text-white text-xs p-2 rounded whitespace-nowrap z-10 pointer-events-none">
+                                      {dateRange}
+                                    </div>
+                                  )}
+                                </div>
+                              )
                             }
-                            
-                            // If wrapped, extend to include the paired isWrapped range
-                            if (range.wrapped) {
-                              const pairedRange = ranges.find(r => r.isWrapped)
-                              if (pairedRange && dynamicMonthCount > 12) {
-                                // Show from startMonth in Year 1 to end of pairedRange in Year 2
-                                // e.g., Oct(9) to Jan(0) in Y+1 = positions 9 through 12+0 = 12
-                                const startMonth = range.start
-                                const endMonth = 12 + pairedRange.end
-                                
-                                const barWidth = (endMonth - startMonth + 1) * columnWidth - 8
-                                const barLeft = startMonth * columnWidth + 4
-                                
-                                const dateRange = record.period || formatDateRange(range.start, range.end)
-                                
-                                return (
-                                  <div
-                                    key={rangeIdx}
-                                    className="absolute h-8 rounded shadow-sm hover:shadow-md transition cursor-pointer group"
-                                    style={{
-                                      backgroundColor: getColorForGroup(groupIdx),
-                                      opacity: hoveredRow === `${groupKey}-${recordIdx}` ? 1 : 0.7,
-                                      width: barWidth,
-                                      left: barLeft,
-                                      top: '50%',
-                                      transform: 'translateY(-50%)',
-                                      minWidth: 40
-                                    }}
-                                    onClick={() => {
-                                      setEditingRowId(`${groupKey}-${recordIdx}`)
-                                      setEditingMask(record.month_mask)
-                                    }}
-                                  >
-                                    {/* Tooltip */}
-                                    {hoveredRow === `${groupKey}-${recordIdx}` && (
-                                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-gray-900 text-white text-xs p-2 rounded whitespace-nowrap z-10 pointer-events-none">
-                                        {dateRange}
-                                        {' (wraps year)'}
-                                      </div>
-                                    )}
-                                  </div>
-                                )
-                              }
-                              // Skip wrapped ranges that don't have proper pairing or not enough month space
-                              return null
-                            }
-                            
-                            // Handle normal (non-wrapped) ranges only
-                            const barStart = range.start
-                            const barEnd = range.end
-                            
-                            const barWidth = (barEnd - barStart + 1) * columnWidth - 8
-                            const barLeft = barStart * columnWidth + 4
-                            
-                            const dateRange = record.period || formatDateRange(range.start, range.end)
-                            
-                            return (
-                              <div
-                                key={rangeIdx}
-                                className="absolute h-8 rounded shadow-sm hover:shadow-md transition cursor-pointer group"
-                                style={{
-                                  backgroundColor: getColorForGroup(groupIdx),
-                                  opacity: hoveredRow === `${groupKey}-${recordIdx}` ? 1 : 0.7,
-                                  width: barWidth,
-                                  left: barLeft,
-                                  top: '50%',
-                                  transform: 'translateY(-50%)',
-                                  minWidth: 40
-                                }}
-                                onClick={() => {
-                                  setEditingRowId(`${groupKey}-${recordIdx}`)
-                                  setEditingMask(record.month_mask)
-                                }}
-                              >
-                                {/* Tooltip */}
-                                {hoveredRow === `${groupKey}-${recordIdx}` && (
-                                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 bg-gray-900 text-white text-xs p-2 rounded whitespace-nowrap z-10 pointer-events-none">
-                                    {dateRange}
-                                  </div>
-                                )}
-                              </div>
-                            )
+                            return null
                           })
                         })()
                       ) : (
