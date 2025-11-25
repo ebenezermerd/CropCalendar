@@ -35,7 +35,10 @@ The application follows a client-server architecture.
     - `Tailwind CSS`: Utility-first CSS framework.
     - `Axios`: Promise-based HTTP client.
     - `Sonner`: Toast notification library.
-    - `html2canvas`, `jsPDF`, `XLSX`: (Planned for future export functionality).
+    - `html2canvas`: Convert DOM to canvas for image export (PNG/JPG/PDF).
+    - `jsPDF`: Generate PDF documents client-side.
+    - `XLSX`: Excel workbook generation and manipulation.
+    - `JSZip`: Create ZIP archives for LZL export format.
 - **Backend**:
     - `FastAPI`: Web framework for building APIs.
     - `Uvicorn`: ASGI server.
@@ -44,8 +47,23 @@ The application follows a client-server architecture.
     - `SQLModel`: Library for interacting with SQL databases.
 
 ### Recent Changes (Latest Session)
+**Session 3 - Bug Fixes & Export Functionality:**
+- Fixed ghost bar issue in year-wrapping periods (Oct-Jan) by filtering duplicate range rendering
+- Implemented dynamic field column resizing (Country, Period, CropProcess columns now resize independently)
+- Added comprehensive export functionality (6 formats + batch export):
+  - **Excel (.xlsx)**: Raw rows, normalized only, or one sheet per country
+  - **PNG/JPG**: Client-side Gantt chart image export
+  - **PDF**: Multi-page support with landscape/portrait orientation
+  - **SVG**: Scalable vector graphics format
+  - **JSON**: Raw data export with metadata
+  - **LZL**: Custom ZIP format containing metadata.json, data.json, preview.png
+  - **Batch Export**: Export multiple groups in single operation
+- Created ExportPanel component with intuitive export menu
+- All exports trigger automatic downloads with timestamp naming
+
+**Previous Session Fixes:**
 - Restructured Gantt from composite labels to dedicated table columns per field
 - Implemented dynamic month expansion based on data's maximum span
 - Added year wrapping labels (Jan Y+1, Feb Y+1, etc.) for clarity
-- Implemented resizable column functionality with mouse drag
+- Implemented resizable month column functionality with mouse drag
 - All features maintain compatibility with existing filtering and grouping

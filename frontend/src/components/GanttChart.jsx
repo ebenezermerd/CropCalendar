@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import { Toaster, toast } from 'sonner'
+import ExportPanel from './ExportPanel'
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
@@ -275,17 +276,24 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
                 <option value="sort">Group by: Crop Process</option>
               </select>
             )}
+
+            <ExportPanel
+              records={records}
+              ganttElementId="gantt-table-container"
+              groupingColumns={groupingColumnArray}
+              filterColumn={filterColumn}
+            />
           </div>
 
           <div className="text-sm text-gray-600 space-y-1">
             <div><strong>{groupNames.length}</strong> group{groupNames.length !== 1 ? 's' : ''}</div>
-            <div className="text-xs text-gray-500">💡 Drag column border to resize</div>
+            <div className="text-xs text-gray-500">💡 Drag column border to resize • 📥 Export data in multiple formats</div>
           </div>
         </div>
       </div>
 
       {/* Gantt Table with Dynamic Columns */}
-      <div className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
+      <div id="gantt-table-container" className="bg-white rounded-lg border border-gray-200 overflow-x-auto">
         <div className="inline-block min-w-full" style={{ cursor: isResizing ? 'col-resize' : 'default' }}>
           {/* Header row */}
           <div className="flex border-b border-gray-300 bg-gray-50">
