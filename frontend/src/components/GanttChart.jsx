@@ -373,10 +373,20 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
                         (() => {
                           const allRanges = extractMonthRanges(record.month_mask)
                           const pairedRange = allRanges.find(r => r.isWrapped)
+                          const wrappedRange = allRanges.find(r => r.wrapped)
                           
                           // Filter to render only: wrapped ranges (with extension) + normal ranges
-                          // Skip: isWrapped ranges (they're part of wrapped)
-                          const rangesToRender = allRanges.filter(range => !range.isWrapped)
+                          // Skip: 
+                          //  1. isWrapped ranges (they're part of wrapped)
+                          //  2. Normal ranges at month 0 if there's a paired isWrapped (they're incorporated into wrapped bar)
+                          const rangesToRender = allRanges.filter(range => {
+                            if (range.isWrapped) return false  // Skip isWrapped
+                            if (range.start === 0 && range.end === 0 && pairedRange && wrappedRange) {
+                              // Skip Jan Year 1 if it's part of a wrap
+                              return false
+                            }
+                            return true
+                          })
                           
                           return rangesToRender.map((range, renderIdx) => {
                             if (range.wrapped && pairedRange && dynamicMonthCount > 12) {
