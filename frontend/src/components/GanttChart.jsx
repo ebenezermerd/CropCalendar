@@ -353,17 +353,21 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
                 {groupingColumnArray.map((col, colIdx) => (
                   <div
                     key={`${groupKey}-field-${colIdx}`}
-                    className="text-sm text-gray-900 border-r border-gray-200 flex items-center px-3 font-medium bg-gray-50"
-                    style={{ width: fieldColumnWidth, height: cellHeight }}
+                    className="text-sm text-gray-900 border-r border-gray-200 flex items-center px-3 font-medium bg-gray-50 min-w-0"
+                    style={{ width: fieldColumnWidth, height: cellHeight, lineHeight: '1.4' }}
                   >
-                    <div className="flex items-center space-x-2 w-full">
+                    <div className="flex items-center space-x-2 w-full min-w-0">
                       {colIdx === 0 && (
                         <div
                           className="w-3 h-3 rounded flex-shrink-0"
                           style={{ backgroundColor: getColorForGroup(groupIdx) }}
                         ></div>
                       )}
-                      <span className="truncate" title={fields[col]}>
+                      <span 
+                        className="whitespace-nowrap overflow-hidden text-ellipsis"
+                        title={fields[col]}
+                        style={{ fontSize: '0.875rem', lineHeight: '1.4' }}
+                      >
                         {fields[col]}
                       </span>
                     </div>

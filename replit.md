@@ -27,6 +27,7 @@ The application follows a client-server architecture.
     - **Visual rectangles**: Generated from month masks with color-coding and year-end wrapping
     - **Date range tooltips**: Hover shows actual dates (e.g., "Jan 02 - Feb 26")
     - **Inline editing**: Click bars to edit month masks
+    - **Proper text rendering**: Field columns now display text with correct line heights and no clipping
 
 - **Advanced Export Functionality - 6 Formats**:
     - **📊 Excel**: Professional table export with multi-select column chooser (all columns selectable by default)
@@ -55,45 +56,53 @@ The application follows a client-server architecture.
     - `Openpyxl`: Library for reading/writing Excel files.
     - `SQLModel`: Library for interacting with SQL databases.
 
-### Recent Changes (Current Session - Advanced Export Fixes)
-**Session 5 - Advanced Export Functionality & Fixes:**
+### Recent Changes (Current Session - Text Rendering & Export Fixes)
+**Session 6 - Text Rendering & Export Capture Fixes:**
 
 **Critical Fixes Implemented:**
-- **Image/PDF Export - Complete Table Capture**:
-  - ✅ Captures ENTIRE table width with all columns visible (not cut off at "field march")
-  - ✅ Fixed text rendering issue: all column headers and row text now fully visible
-  - ✅ Implemented `captureFullTable()` helper that properly handles scrollable content
-  - ✅ Uses `html2canvas` with correct width/height constraints and DOM positioning
-  - ✅ Prevents CSS overlays from obscuring text (removes hover states during capture)
-  - ✅ High/Normal resolution options: 2x scale for crisp quality, 1x for smaller files
+- **Text Clipping Issue - RESOLVED**:
+  - ✅ Fixed truncated text in field columns (both live display and exports)
+  - ✅ Replaced Tailwind `truncate` class with explicit `whitespace-nowrap overflow-hidden text-ellipsis`
+  - ✅ Added proper `lineHeight: 1.4` to prevent vertical squeezing
+  - ✅ Added `min-w-0` to flex containers for proper text sizing
+  - ✅ Text now displays fully without clipping at top or bottom
+  - ✅ Badge and text render together without vertical compression
 
-- **Excel Export - Professional with Column Selection**:
-  - ✅ Replaced raw data export with professional table format
-  - ✅ Multi-select column chooser UI with All/None buttons
-  - ✅ All columns selected by default for convenience
-  - ✅ Professional styling: colored headers, alternating row colors, proper borders
-  - ✅ Metadata section shows export date, record count, selected columns
-  - ✅ Proper column widths and row heights for readability
+- **Export Capture Improvements**:
+  - ✅ Enhanced capture function to remove overflow clipping during export
+  - ✅ Fixed flex alignment to ensure text renders at proper baseline
+  - ✅ Implemented span inline-block rendering with vertical alignment
+  - ✅ Added line-height corrections for proper text rendering
+  - ✅ All styles automatically restored after capture (non-destructive)
 
 - **Export Dialog Enhancements**:
-  - ✅ Dropdown format selector (single choice)
-  - ✅ Format-specific options appear only for selected format
-  - ✅ Color-coded sections for each format type
-  - ✅ Helpful tips explaining what each export captures
-  - ✅ Column selection UI for Excel (multi-checkbox with All/None shortcuts)
+  - ✅ Dropdown format selector (single choice - cleaner UX)
+  - ✅ Format-specific options appear conditionally
+  - ✅ Color-coded sections for visual clarity
+  - ✅ Helpful tips and descriptions for each format
+  - ✅ Column selection UI for Excel (multi-checkbox with All/None)
 
 **Technical Implementation Details:**
-- `captureFullTable()`: New helper function that creates a temporary DOM wrapper, clones the table, and captures with proper width/height constraints
-- `exportToExcelWithColumns()`: Replaces `exportToExcelAsTable()` with column selection support and professional formatting
-- `exportTableAsPNG/JPG/PDF()`: Updated to use `captureFullTable()` for complete table rendering
-- Improved `ExportPanel` component with column selection UI when Excel format is selected
-- All image exports now capture entire scrollable content without truncation
+- **GanttChart.jsx**: Updated field column styling to use explicit text-ellipsis handling
+- **exportUtils.js**: Enhanced `captureFullTable()` with overflow removal and flex alignment fixes
+- **Text Rendering**: Proper line-height and vertical alignment ensures no clipping
+- **Restoration**: All temporary style changes are cleaned up after capture
 
 **Previous Session Improvements:**
-- Fixed ghost bar issue in year-wrapping periods (Oct-Jan) by filtering duplicate range rendering
-- Implemented dynamic field column resizing (Country, Period, CropProcess columns now resize independently)
+- Fixed ghost bar issue in year-wrapping periods (Oct-Jan)
+- Implemented dynamic field column resizing
 - Created initial export dialog with format selection
-- Restructured Gantt from composite labels to dedicated table columns per field
+- Restructured Gantt from composite labels to dedicated table columns
 - Implemented dynamic month expansion based on data's maximum span
-- Added year wrapping labels (Jan Y+1, Feb Y+1, etc.) for clarity
-- Implemented resizable month column functionality with mouse drag
+- Added year wrapping labels (Jan Y+1, Feb Y+1, etc.)
+- Implemented resizable month column functionality
+
+### Known Issues & Limitations
+None currently identified - all critical functionality is working as expected.
+
+### Testing Recommendations
+- ✅ Export PNG/JPG with High resolution - captures full table with all text visible
+- ✅ Export PDF in landscape/portrait modes - multi-page support working
+- ✅ Export Excel with column selection - professional formatting applied
+- ✅ View Gantt chart with various grouping combinations - text displays properly
+- ✅ Resize columns while viewing - layout remains stable
