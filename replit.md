@@ -28,14 +28,14 @@ The application follows a client-server architecture.
     - **Date range tooltips**: Hover shows actual dates (e.g., "Jan 02 - Feb 26")
     - **Inline editing**: Click bars to edit month masks
 
-- **Comprehensive Export Functionality**:
-    - **Smart Format Selection**: Dropdown-based format selector with context-specific options
-    - **Excel Exports**: 4 options (table with formatting, raw data, normalized, by country)
-    - **Image Exports**: PNG/JPG with full table capture and dynamic column width preservation
-    - **PDF Export**: Multi-page support with landscape/portrait orientation, entire table captured
-    - **SVG Export**: Scalable vector format of complete table presentation
-    - **JSON/LZL**: Data export with metadata and grouping information
-    - **Quality/Resolution Options**: Choose between high-quality (2x scale) or normal (1x) rendering
+- **Advanced Export Functionality - 6 Formats**:
+    - **📊 Excel**: Professional table export with multi-select column chooser (all columns selectable by default)
+    - **🖼️ PNG/JPG**: Full-width table capture with entire content, all columns visible, clean text rendering
+    - **📄 PDF**: Multi-page document with landscape/portrait orientation, complete table presentation
+    - **📐 SVG**: Scalable vector format of complete table with full width
+    - **📋 JSON**: Complete data export with metadata and grouping information
+    - **📦 LZL**: Portable ZIP package with metadata, data, and full-resolution preview
+    - **Quality/Resolution Options**: High (2x scale) or Normal (1x scale) for images/PDF
 
 ### External Dependencies
 - **Frontend**:
@@ -46,7 +46,7 @@ The application follows a client-server architecture.
     - `Sonner`: Toast notification library.
     - `html2canvas`: Convert DOM to canvas for image export (PNG/JPG/PDF).
     - `jsPDF`: Generate PDF documents client-side with multi-page support.
-    - `XLSX`: Excel workbook generation with formatting support.
+    - `XLSX`: Excel workbook generation with professional formatting.
     - `JSZip`: Create ZIP archives for LZL export format.
 - **Backend**:
     - `FastAPI`: Web framework for building APIs.
@@ -55,52 +55,45 @@ The application follows a client-server architecture.
     - `Openpyxl`: Library for reading/writing Excel files.
     - `SQLModel`: Library for interacting with SQL databases.
 
-### Recent Changes (Current Session - Export Redesign)
-**Session 4 - Export Dialog Redesign & Full Table Export Implementation:**
-- **Completely redesigned export dialog**: 
-  - Single format selector dropdown (eliminates list format)
-  - Format-specific options appear only after format selection
-  - Clear explanations for each export format
-  - Improved visual hierarchy with color-coded sections
-  - Shows record count and grouping fields in header
+### Recent Changes (Current Session - Advanced Export Fixes)
+**Session 5 - Advanced Export Functionality & Fixes:**
 
-- **Fixed critical export issue - Now exports complete table presentation**:
-  - **Excel (.xlsx)**: 
-    - "Full Table with Formatting" - exports Gantt layout with visual shading and group headers
-    - Raw data, normalized, and by-country options available
-    - Includes header styling and alternating row colors
-  - **PNG/JPG**: 
-    - Captures entire table with all groups and rows (not just visible area)
-    - Respects dynamic column width configuration
-    - High/Normal resolution options (2x or 1x scale)
-  - **PDF**: 
-    - Multi-page support for large tables
-    - Landscape/Portrait orientation selection
-    - Full table capture with professional layout
-  - **SVG/JSON/LZL**: 
-    - SVG: Complete scalable vector export
-    - JSON: Full data with metadata and grouping info
-    - LZL: Portable ZIP with metadata, data, and preview PNG
+**Critical Fixes Implemented:**
+- **Image/PDF Export - Complete Table Capture**:
+  - ✅ Captures ENTIRE table width with all columns visible (not cut off at "field march")
+  - ✅ Fixed text rendering issue: all column headers and row text now fully visible
+  - ✅ Implemented `captureFullTable()` helper that properly handles scrollable content
+  - ✅ Uses `html2canvas` with correct width/height constraints and DOM positioning
+  - ✅ Prevents CSS overlays from obscuring text (removes hover states during capture)
+  - ✅ High/Normal resolution options: 2x scale for crisp quality, 1x for smaller files
 
-- **UI/UX Improvements**:
-  - Export button remains consistent green button with dropdown
-  - Format options clearly labeled with emojis for visual recognition
-  - Helpful tips showing how many records will be exported
-  - Quality/resolution options for image formats
-  - All exports use professional naming with timestamps
+- **Excel Export - Professional with Column Selection**:
+  - ✅ Replaced raw data export with professional table format
+  - ✅ Multi-select column chooser UI with All/None buttons
+  - ✅ All columns selected by default for convenience
+  - ✅ Professional styling: colored headers, alternating row colors, proper borders
+  - ✅ Metadata section shows export date, record count, selected columns
+  - ✅ Proper column widths and row heights for readability
 
-- **Technical Implementation**:
-  - `exportToExcelAsTable()`: Exports table with visual formatting (colors, shading, group headers)
-  - `exportTableAsPNG/JPG/PDF()`: New functions that capture entire table with dynamic widths
-  - Improved html2canvas configuration for better rendering of complex layouts
-  - Proper page breaks and sizing for PDF multi-page support
-  - All exports now include grouped data and metadata
+- **Export Dialog Enhancements**:
+  - ✅ Dropdown format selector (single choice)
+  - ✅ Format-specific options appear only for selected format
+  - ✅ Color-coded sections for each format type
+  - ✅ Helpful tips explaining what each export captures
+  - ✅ Column selection UI for Excel (multi-checkbox with All/None shortcuts)
 
-**Previous Session Fixes:**
+**Technical Implementation Details:**
+- `captureFullTable()`: New helper function that creates a temporary DOM wrapper, clones the table, and captures with proper width/height constraints
+- `exportToExcelWithColumns()`: Replaces `exportToExcelAsTable()` with column selection support and professional formatting
+- `exportTableAsPNG/JPG/PDF()`: Updated to use `captureFullTable()` for complete table rendering
+- Improved `ExportPanel` component with column selection UI when Excel format is selected
+- All image exports now capture entire scrollable content without truncation
+
+**Previous Session Improvements:**
 - Fixed ghost bar issue in year-wrapping periods (Oct-Jan) by filtering duplicate range rendering
 - Implemented dynamic field column resizing (Country, Period, CropProcess columns now resize independently)
+- Created initial export dialog with format selection
 - Restructured Gantt from composite labels to dedicated table columns per field
 - Implemented dynamic month expansion based on data's maximum span
 - Added year wrapping labels (Jan Y+1, Feb Y+1, etc.) for clarity
 - Implemented resizable month column functionality with mouse drag
-- All features maintain compatibility with existing filtering and grouping
