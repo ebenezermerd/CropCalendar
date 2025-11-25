@@ -1,6 +1,6 @@
 # Crop Calendar Gantt Export Tool
 
-## 🎯 Project Status: FUNCTIONALITY 3 COMPLETE ✅
+## 🎯 Project Status: FUNCTIONALITY 4 COMPLETE ✅
 
 ### FILE UPLOAD & PREVIEW (FUNCTIONALITY 1) - COMPLETE ✅
 Professional, production-ready file upload and data preview system.
@@ -10,6 +10,9 @@ Advanced column mapping with auto-detection, confidence scoring, user configurat
 
 ### PARSING & NORMALIZATION (FUNCTIONALITY 3) - COMPLETE ✅
 Robust month/season extraction with 12-bit month masks, manual review flagging, and full record normalization.
+
+### GROUP SELECTION & FILTERING (FUNCTIONALITY 4) - COMPLETE ✅
+Column-based filtering with fuzzy search, bulk selection, and filtered results with parsed data.
 
 **Frontend:** Professional React + Tailwind UI with drag-drop, file validation, progress tracking, column mapper, parsing UI, toast notifications
 **Backend:** FastAPI with intelligent column auto-detection, mapping endpoints, robust month/season parsing with month_mask generation
@@ -25,8 +28,9 @@ Robust month/season extraction with 12-bit month masks, manual review flagging, 
 3. **UploadStatus.jsx** - Upload summary with file metadata
 4. **UploadPage.jsx** - Complete upload workflow with next button
 5. **ColumnMapping.jsx** - Advanced column mapper with dropdowns & toast notifications
-6. **ParsingResults.jsx** - Parsing UI with progress, stats, manual review flags (NEW)
-7. **App.jsx** - Application root with 3-step routing (upload → mapping → parsing)
+6. **ParsingResults.jsx** - Parsing UI with progress, stats, manual review flags
+7. **GroupSelector.jsx** - Column selector, fuzzy search, bulk selection, filtering (NEW)
+8. **App.jsx** - Application root with 4-step routing (upload → mapping → parsing → filtering)
 
 ### Backend Features
 - `POST /api/upload` - File upload with preview and auto-detection
@@ -35,7 +39,10 @@ Robust month/season extraction with 12-bit month masks, manual review flagging, 
 - `POST /api/upload/{id}/detect-columns` - Re-run detection
 - `GET /api/upload/{id}/column-mapping` - Column mapping UI with confidence scores
 - `POST /api/upload/{id}/save-mappings` - Save user-configured mappings with toast notifications
-- `POST /api/upload/{id}/parse` - Parse entire file with month extraction & month_mask generation (NEW)
+- `POST /api/upload/{id}/parse` - Parse entire file with month extraction & month_mask generation
+- `GET /api/upload/{id}/group-columns` - Get available columns for filtering (NEW)
+- `GET /api/upload/{id}/unique-values/{column}` - Get unique values with counts (NEW)
+- `POST /api/upload/{id}/filter` - Apply filter and get matching records (NEW)
 - `GET /api/health` - Health check
 
 ### Auto-Detection System
@@ -55,7 +62,7 @@ Robust month/season extraction with 12-bit month masks, manual review flagging, 
 - Toast notifications for save success/failure
 - Save mappings to database with validation
 
-### Parsing & Normalization System (NEW)
+### Parsing & Normalization System
 - Robust month/season extraction algorithm
   - Handles: "Jan-Mar", "Mar-May", "3-5", "January", "Mar", "All year", "Oct→Feb", etc.
 - 12-bit month_mask generation for fast queries
@@ -63,6 +70,14 @@ Robust month/season extraction with 12-bit month masks, manual review flagging, 
 - Manual review flagging for unparseable values
 - 100% parsing success rate on sample data (18/18 records)
 - Sample data preview in UI
+
+### Group Selection & Filtering System (NEW)
+- Show detected unique values for any chosen column
+- Search capability with fuzzy matching (Fuse.js)
+- Fuzzy merge option for similar names
+- Bulk-select capability with select/clear all buttons
+- User selects values and system filters matching rows
+- Results include both raw and parsed data with month masks
 
 ### File Handling
 - CSV, XLSX, XLS, XML support
@@ -205,12 +220,13 @@ FUNCTIONALITY 3 (Parsing & Normalization) is complete with month extraction and 
 
 ---
 
-**Status:** ✅ FUNCTIONALITY 1-3 COMPLETE & PRODUCTION-READY
+**Status:** ✅ FUNCTIONALITY 1-4 COMPLETE & PRODUCTION-READY
 
-All three functionalities are fully implemented:
+All four functionalities are fully implemented:
 - FUNCTIONALITY 1 ✅ - File Upload & Preview
 - FUNCTIONALITY 2 ✅ - Column Mapping & Customization (with toast notifications)
 - FUNCTIONALITY 3 ✅ - Parsing & Normalization (with month_mask generation)
+- FUNCTIONALITY 4 ✅ - Group Selection & Filtering (with fuzzy search)
 
 ### What Users Can Do Now:
 1. Upload agricultural data files (CSV, XLSX, XLS, XML)
@@ -223,5 +239,9 @@ All three functionalities are fully implemented:
 8. View parsing results with success/manual review stats
 9. See month masks (12-bit integers) for fast queries
 10. Download sample parsed records
+11. Select any column to filter by
+12. Search and filter unique values with fuzzy matching
+13. Bulk-select or deselect all values
+14. Get filtered results with both raw and parsed data
 
-Ready to proceed with FUNCTIONALITY 4: Group Selector & Filtering.
+Ready to proceed with FUNCTIONALITY 5: Gantt Viewer & Visualization.

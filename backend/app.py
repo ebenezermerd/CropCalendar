@@ -1,6 +1,7 @@
 from fastapi import FastAPI, UploadFile, File, BackgroundTasks, HTTPException
 from fastapi.responses import JSONResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 import os
 import uuid
 import json
@@ -23,6 +24,12 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ==================== REQUEST MODELS ====================
+
+class FilterRequest(BaseModel):
+    column_name: str
+    values: List[str]
 
 DATA_DIR = "data"
 os.makedirs(DATA_DIR, exist_ok=True)
@@ -738,6 +745,171 @@ def parse_and_normalize_data(upload_id: str):
             "message": f"Parsed {stats['total_parsed']} records"
         }
         
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ==================== GROUP SELECTION & FILTERING ====================
+
+@app.get("/api/upload/{upload_id}/group-columns")
+def get_group_columns(upload_id: str):
+    """
+    Get list of available columns for grouping/filtering.
+    Returns columns with their data types and unique value counts.
+    """
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        
+        # Get file path
+        c.execute("SELECT path FROM uploads WHERE upload_id = ?", (upload_id,))
+        row = c.fetchone()
+        if not row:
+            conn.close()
+            raise HTTPException(status_code=404, detail="Upload not found")
+        
+        file_path = row[0]
+        df, _ = read_file_to_dataframe(file_path)
+        
+        # Get columns with unique counts
+        columns_info = []
+        for col in df.columns:
+            unique_count = df[col].nunique()
+            columns_info.append({
+                "name": col,
+                "unique_values": unique_count,
+                "type": str(df[col].dtype)
+            })
+        
+        conn.close()
+        return {
+            "upload_id": upload_id,
+            "columns": columns_info
+        }
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/upload/{upload_id}/unique-values/{column_name}")
+def get_unique_values(upload_id: str, column_name: str):
+    """
+    Get all unique values for a specific column.
+    Returns sorted list with counts.
+    """
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        
+        c.execute("SELECT path FROM uploads WHERE upload_id = ?", (upload_id,))
+        row = c.fetchone()
+        if not row:
+            conn.close()
+            raise HTTPException(status_code=404, detail="Upload not found")
+        
+        file_path = row[0]
+        df, _ = read_file_to_dataframe(file_path)
+        
+        if column_name not in df.columns:
+            raise HTTPException(status_code=400, detail=f"Column '{column_name}' not found")
+        
+        # Get unique values with counts
+        value_counts = df[column_name].value_counts().reset_index()
+        value_counts.columns = ['value', 'count']
+        unique_values = value_counts.sort_values('value').to_dict('records')
+        
+        conn.close()
+        return {
+            "upload_id": upload_id,
+            "column": column_name,
+            "unique_values": unique_values,
+            "total_unique": len(unique_values)
+        }
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/upload/{upload_id}/filter")
+def apply_filter(upload_id: str, filter_req: FilterRequest):
+    """
+    Apply filter to get matching records.
+    
+    Request body:
+    {
+        "column_name": "Crop",
+        "values": ["Sesame", "Wheat"]
+    }
+    
+    Returns filtered records with their parsed data.
+    """
+    try:
+        column_name = filter_req.column_name
+        selected_values = filter_req.values
+        
+        if not column_name or not selected_values:
+            raise HTTPException(status_code=400, detail="Missing column_name or values")
+        
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        
+        # Get upload and mappings
+        c.execute(
+            "SELECT path, columns_json FROM uploads WHERE upload_id = ?",
+            (upload_id,)
+        )
+        row = c.fetchone()
+        if not row:
+            conn.close()
+            raise HTTPException(status_code=404, detail="Upload not found")
+        
+        file_path, mappings_json = row
+        mappings = json.loads(mappings_json) if mappings_json else {}
+        
+        # Read and filter data
+        df, _ = read_file_to_dataframe(file_path)
+        
+        if column_name not in df.columns:
+            raise HTTPException(status_code=400, detail=f"Column '{column_name}' not found")
+        
+        # Filter to matching rows
+        filtered_df = df[df[column_name].isin(selected_values)]
+        
+        # Get parsed records from database if available
+        c.execute("""
+            SELECT row_number, normalized_json, month_mask FROM records
+            WHERE upload_id = ?
+        """, (upload_id,))
+        parsed_rows = {row[0]: (json.loads(row[1]) if row[1] else {}, row[2]) for row in c.fetchall()}
+        
+        # Build result records
+        result_records = []
+        for idx, df_row in filtered_df.iterrows():
+            record = dict(df_row)
+            row_num = idx + 1
+            
+            # Include parsed data if available
+            if row_num in parsed_rows:
+                parsed, month_mask = parsed_rows[row_num]
+                record['parsed_data'] = parsed
+                record['month_mask'] = month_mask
+            
+            result_records.append(record)
+        
+        conn.close()
+        
+        return {
+            "success": True,
+            "upload_id": upload_id,
+            "filter": {
+                "column": column_name,
+                "values": selected_values
+            },
+            "total_records": len(result_records),
+            "records": result_records
+        }
     except HTTPException as e:
         raise e
     except Exception as e:

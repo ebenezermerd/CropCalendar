@@ -2,6 +2,7 @@ import { useState } from 'react'
 import UploadPage from './pages/UploadPage'
 import ColumnMapping from './components/ColumnMapping'
 import ParsingResults from './components/ParsingResults'
+import GroupSelector from './components/GroupSelector'
 import './App.css'
 
 function App() {
@@ -36,12 +37,25 @@ function App() {
   }
 
   const handleParsingComplete = (results) => {
-    // Parsing finished - could move to visualization next
+    // Parsing finished - move to filtering
     setUploadData(prev => ({
       ...prev,
       parsing_results: results
     }))
-    // TODO: Move to next step (visualization)
+    setCurrentStep('filtering')
+  }
+
+  const handleBackFromFiltering = () => {
+    setCurrentStep('parsing')
+  }
+
+  const handleFilterApply = (filterResults) => {
+    // Filter applied successfully
+    setUploadData(prev => ({
+      ...prev,
+      filter_results: filterResults
+    }))
+    // TODO: Move to visualization/Gantt view
   }
 
   return (
@@ -70,6 +84,17 @@ function App() {
               uploadId={uploadData.upload_id}
               onParsingComplete={handleParsingComplete}
               onBack={handleBackFromParsing}
+            />
+          </div>
+        </div>
+      )}
+      {currentStep === 'filtering' && uploadData && (
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+          <div className="max-w-7xl mx-auto px-4 py-12">
+            <GroupSelector
+              uploadId={uploadData.upload_id}
+              onFilterApply={handleFilterApply}
+              onBack={handleBackFromFiltering}
             />
           </div>
         </div>
