@@ -15,6 +15,7 @@ function extractMonthRanges(mask) {
   let inRange = false
   let rangeStart = -1
 
+  // First pass: collect all continuous ranges
   for (let i = 0; i < 12; i++) {
     const hasMonth = (mask >> i) & 1
     
@@ -22,26 +23,29 @@ function extractMonthRanges(mask) {
       inRange = true
       rangeStart = i
     } else if (!hasMonth && inRange) {
-      ranges.push({ start: rangeStart, end: i - 1 })
+      ranges.push({ start: rangeStart, end: i - 1, wrapsYear: false })
       inRange = false
     }
   }
 
+  // Handle case where range extends to end of year
   if (inRange) {
-    if ((mask & 1) && rangeStart !== 0) {
-      let janEnd = 0
-      for (let i = 1; i < 12; i++) {
-        if ((mask >> i) & 1) janEnd = i
-        else break
-      }
-      
-      ranges.push({ start: rangeStart, end: 11, wrapped: true })
-      
-      // Always add the isWrapped range if we detected a wrap (bit 0 is set)
-      // This handles cases like Oct-Jan (janEnd=0) and Oct-Mar (janEnd=2)
-      ranges.push({ start: 0, end: janEnd, isWrapped: true })
-    } else {
-      ranges.push({ start: rangeStart, end: 11 })
+    ranges.push({ start: rangeStart, end: 11, wrapsYear: false })
+  }
+
+  // Check for year-wrapping: if Jan (bit 0) is set and there's a range starting in latter half of year
+  if ((mask & 1) && ranges.some(r => r.start >= 6)) {
+    // Find the Jan-based range (should be at start)
+    let janEnd = 0
+    for (let i = 1; i < 12; i++) {
+      if ((mask >> i) & 1) janEnd = i
+      else break
+    }
+    
+    // Mark the last range (from latter half of year) as wrapping
+    if (ranges.length > 0) {
+      ranges[ranges.length - 1].wrapsYear = true
+      ranges[ranges.length - 1].wrappedEnd = janEnd
     }
   }
 
@@ -407,25 +411,16 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
                       {record.month_mask ? (
                         (() => {
                           const allRanges = extractMonthRanges(record.month_mask)
-                          const pairedRange = allRanges.find(r => r.isWrapped)
-                          const wrappedRange = allRanges.find(r => r.wrapped)
                           
-                          // Filter to render: wrapped ranges (extended) + normal ranges
-                          // Skip isWrapped ranges (incorporated into wrapped) and duplicate Jan bars
-                          const rangesToRender = allRanges.filter(range => {
-                            if (range.isWrapped) return false
-                            if (range.start === 0 && range.end === 0 && pairedRange && wrappedRange) return false
-                            return true
-                          })
-                          
-                          return rangesToRender.map((range, renderIdx) => {
-                            if (range.wrapped && pairedRange && dynamicMonthCount > 12) {
-                              // Wrapped range with pairing - extend to Year 2
-                              const startMonth = range.start
-                              const endMonth = 12 + pairedRange.end
-                              const barWidth = (endMonth - startMonth + 1) * columnWidth - 8
-                              const barLeft = startMonth * columnWidth + 4
-                              const dateRange = record.period || formatDateRange(range.start, range.end)
+                          return allRanges.map((range, renderIdx) => {
+                            if (range.wrapsYear && range.wrappedEnd !== undefined) {
+                              // Year-wrapping range: Oct-Mar becomes Oct(9) to Dec(11) then Jan(0) to Mar(2)
+                              // In 24-month view: positions 9-14 (9,10,11 from year 1, then 12,13,14 for Jan,Feb,Mar of year 2)
+                              const barStart = range.start
+                              const barEnd = 12 + range.wrappedEnd
+                              const barWidth = (barEnd - barStart + 1) * columnWidth - 8
+                              const barLeft = barStart * columnWidth + 4
+                              const dateRange = record.period || `${MONTHS[range.start]} - ${MONTHS[range.wrappedEnd]}`
                               
                               return (
                                 <div
@@ -452,8 +447,8 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
                                   )}
                                 </div>
                               )
-                            } else if (!range.wrapped) {
-                              // Normal non-wrapped range
+                            } else {
+                              // Normal non-wrapping range - render each in correct position
                               const barStart = range.start
                               const barEnd = range.end
                               const barWidth = (barEnd - barStart + 1) * columnWidth - 8
@@ -486,7 +481,6 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
                                 </div>
                               )
                             }
-                            return null
                           })
                         })()
                       ) : (
