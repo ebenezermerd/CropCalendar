@@ -33,8 +33,9 @@ function extractMonthRanges(mask) {
     ranges.push({ start: rangeStart, end: 11, wrapsYear: false })
   }
 
-  // Check for year-wrapping: if Jan (bit 0) is set and there's a range starting in latter half of year
-  if ((mask & 1) && ranges.some(r => r.start >= 6)) {
+  // Check for year-wrapping: ONLY if a range ends at month 11 (extends through Dec) AND Jan (bit 0) is set
+  // This correctly identifies Oct-Mar wrap but NOT Jan-Mar + Oct-Oct as separate seasons
+  if ((mask & 1) && ranges.length > 0 && ranges[ranges.length - 1].end === 11) {
     // Find the Jan-based range (should be at start)
     let janEnd = 0
     for (let i = 1; i < 12; i++) {
@@ -42,11 +43,9 @@ function extractMonthRanges(mask) {
       else break
     }
     
-    // Mark the last range (from latter half of year) as wrapping
-    if (ranges.length > 0) {
-      ranges[ranges.length - 1].wrapsYear = true
-      ranges[ranges.length - 1].wrappedEnd = janEnd
-    }
+    // Mark the last range (from latter half of year) as wrapping to next year
+    ranges[ranges.length - 1].wrapsYear = true
+    ranges[ranges.length - 1].wrappedEnd = janEnd
   }
 
   return ranges
@@ -80,16 +79,13 @@ function calculateMaxMonthSpan(records) {
       
       // Check each range to find the maximum span
       ranges.forEach(range => {
-        if (range.wrapped && !range.isWrapped) {
-          // This range wraps to next year. Find its paired isWrapped range
-          const wrappedPair = ranges.find(r => r.isWrapped)
-          if (wrappedPair) {
-            // Range: e.g., Oct(9) to Dec(11) wrapped to Jan(0) to Mar(2)
-            // Months needed in 24-month system: 
-            // From month 9 to month 12+2 = need 15 slots (0-14)
-            const monthsSpanned = 12 + wrappedPair.end + 1
-            maxMonthsNeeded = Math.max(maxMonthsNeeded, monthsSpanned)
-          }
+        if (range.wrapsYear && range.wrappedEnd !== undefined) {
+          // This range wraps to next year (e.g., Oct-Mar)
+          // Range: e.g., Oct(9) to Dec(11) wrapped to Jan(0) to Mar(2)
+          // Months needed in 24-month system: 
+          // From month 9 to month 12+2 = need 15 slots (0-14)
+          const monthsSpanned = 12 + range.wrappedEnd + 1
+          maxMonthsNeeded = Math.max(maxMonthsNeeded, monthsSpanned)
         }
       })
     }
