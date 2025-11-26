@@ -959,6 +959,7 @@ def get_unique_values(upload_id: str, column_name: str):
 def apply_filter(upload_id: str, filter_req: FilterRequest):
     """
     Apply filter to get matching records.
+    ONLY RETURNS HARVESTING RECORDS - sowing/planting data is excluded.
     
     Request body:
     {
@@ -966,7 +967,7 @@ def apply_filter(upload_id: str, filter_req: FilterRequest):
         "values": ["Sesame", "Wheat"]
     }
     
-    Returns filtered records with their parsed data.
+    Returns filtered records with their parsed data (harvesting only).
     """
     try:
         column_name = filter_req.column_name
@@ -999,6 +1000,14 @@ def apply_filter(upload_id: str, filter_req: FilterRequest):
         
         # Filter to matching rows
         filtered_df = df[df[column_name].isin(selected_values)]
+        
+        # Filter to ONLY harvesting records - exclude sowing/planting
+        cropprocess_cols = [col for col in filtered_df.columns if 'cropprocess' in col.lower() or 'crop_process' in col.lower()]
+        if cropprocess_cols:
+            cropprocess_col = cropprocess_cols[0]
+            filtered_df = filtered_df[
+                filtered_df[cropprocess_col].str.lower().str.contains('harvesting', na=False)
+            ]
         
         # Get parsed records from database if available
         c.execute("""

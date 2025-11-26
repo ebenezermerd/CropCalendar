@@ -132,11 +132,22 @@ export default function GroupSelector({ uploadId, onFilterApply, onBack }) {
       )
 
       if (response.data.success) {
-        toast.success(`Filtered ${response.data.total_records} records`, {
-          description: `Column: ${selectedColumn} • Values: ${selectedValues.size}`,
+        // Ensure ONLY harvesting records are included
+        const harvestingRecords = response.data.records.filter(record => {
+          const cropProcess = record.cropProcess || record.crop_process || ''
+          return cropProcess.toLowerCase().includes('harvesting')
+        })
+        
+        toast.success(`Filtered ${harvestingRecords.length} harvesting records`, {
+          description: `Column: ${selectedColumn} • Harvesting only`,
           duration: 3000
         })
-        onFilterApply(response.data)
+        
+        onFilterApply({
+          ...response.data,
+          records: harvestingRecords,
+          total_records: harvestingRecords.length
+        })
       }
     } catch (err) {
       const errorMsg = err.response?.data?.detail || 'Failed to apply filter'

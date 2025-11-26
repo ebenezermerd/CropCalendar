@@ -107,7 +107,15 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
   const [resizeStart, setResizeStart] = useState(0)
   const [resizingType, setResizingType] = useState(null) // 'month' or 'field'
 
-  const records = filterResults?.records || []
+  // Ensure ONLY harvesting records are displayed - remove any sowing/planting
+  const allRecords = filterResults?.records || []
+  const records = useMemo(() => {
+    return allRecords.filter(record => {
+      const cropProcess = record.cropProcess || record.crop_process || ''
+      return cropProcess.toLowerCase().includes('harvesting')
+    })
+  }, [allRecords])
+  
   const filterColumn = filterResults?.filter?.column
   
   const groupingColumnArray = Array.isArray(groupingColumns) ? groupingColumns : [groupingColumns]
