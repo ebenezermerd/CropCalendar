@@ -106,17 +106,11 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
   const [isResizing, setIsResizing] = useState(false)
   const [resizeStart, setResizeStart] = useState(0)
   const [resizingType, setResizingType] = useState(null) // 'month' or 'field'
-  const [cropProcessFilter, setCropProcessFilter] = useState('all') // 'all', 'harvesting'
 
   const records = filterResults?.records || []
   const filterColumn = filterResults?.filter?.column
   
   const groupingColumnArray = Array.isArray(groupingColumns) ? groupingColumns : [groupingColumns]
-  
-  // Find crop process column
-  const cropProcessColumn = groupingColumnArray.find(col =>
-    col.toLowerCase().includes('cropprocess') || col.toLowerCase().includes('crop_process')
-  )
   
   const parseGroupKey = (groupKey) => {
     const parts = groupKey.split(' | ')
@@ -127,25 +121,9 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
     return fieldValues
   }
 
-  const filteredRecords = useMemo(() => {
-    if (!cropProcessFilter || cropProcessFilter === 'all' || !cropProcessColumn) {
-      return records
-    }
-    
-    return records.filter(record => {
-      const cropProcess = record[cropProcessColumn]
-      if (!cropProcess) return true
-      
-      if (cropProcessFilter === 'harvesting') {
-        return cropProcess.toLowerCase().includes('harvesting')
-      }
-      return true
-    })
-  }, [records, cropProcessFilter, cropProcessColumn])
-
   const groupedRecords = useMemo(() => {
     const groups = {}
-    filteredRecords.forEach((record, idx) => {
+    records.forEach((record, idx) => {
       const groupKey = groupingColumnArray
         .map(col => record[col] || 'Unknown')
         .join(' | ')
@@ -156,12 +134,12 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
       groups[groupKey].push({ ...record, _index: idx })
     })
     return groups
-  }, [filteredRecords, groupingColumnArray])
+  }, [records, groupingColumnArray])
 
   // Calculate dynamic month span
   const dynamicMonthCount = useMemo(() => {
-    return calculateMaxMonthSpan(filteredRecords)
-  }, [filteredRecords])
+    return calculateMaxMonthSpan(records)
+  }, [records])
 
   let groupNames = Object.keys(groupedRecords).sort()
 
@@ -192,17 +170,6 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
   const cropProcessColumns = groupingColumnArray.filter(col =>
     col.toLowerCase().includes('cropprocess') || col.toLowerCase().includes('crop_process')
   )
-  
-  // Get unique crop processes from filtered records
-  const uniqueCropProcesses = useMemo(() => {
-    if (!cropProcessColumn) return []
-    const processes = new Set()
-    filteredRecords.forEach(record => {
-      const process = record[cropProcessColumn]
-      if (process) processes.add(process)
-    })
-    return Array.from(processes).sort()
-  }, [filteredRecords, cropProcessColumn])
 
   const cellHeight = 60
 
@@ -300,43 +267,18 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
             </button>
 
             {cropProcessColumns.length > 0 && (
-              <>
-                <select
-                  value={sortByCropProcess || 'none'}
-                  onChange={(e) => setSortByCropProcess(e.target.value === 'none' ? null : e.target.value)}
-                  className="px-4 py-2 rounded-lg font-medium bg-gray-200 text-gray-900 hover:bg-gray-300 transition border border-gray-300"
-                >
-                  <option value="none">Group by: All</option>
-                  <option value="sort">Group by: Crop Process</option>
-                </select>
-
-                <div className="border-l border-gray-300 pl-2 ml-1 flex space-x-2">
-                  <button
-                    onClick={() => setCropProcessFilter('all')}
-                    className={`px-4 py-2 rounded-lg font-medium transition ${
-                      cropProcessFilter === 'all'
-                        ? 'bg-purple-600 text-white'
-                        : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
-                    }`}
-                  >
-                    📊 All
-                  </button>
-                  <button
-                    onClick={() => setCropProcessFilter('harvesting')}
-                    className={`px-4 py-2 rounded-lg font-medium transition ${
-                      cropProcessFilter === 'harvesting'
-                        ? 'bg-amber-600 text-white'
-                        : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
-                    }`}
-                  >
-                    🌾 Harvesting Only
-                  </button>
-                </div>
-              </>
+              <select
+                value={sortByCropProcess || 'none'}
+                onChange={(e) => setSortByCropProcess(e.target.value === 'none' ? null : e.target.value)}
+                className="px-4 py-2 rounded-lg font-medium bg-gray-200 text-gray-900 hover:bg-gray-300 transition border border-gray-300"
+              >
+                <option value="none">Group by: All</option>
+                <option value="sort">Group by: Crop Process</option>
+              </select>
             )}
 
             <ExportPanel
-              records={filteredRecords}
+              records={records}
               ganttElementId="gantt-table-container"
               groupingColumns={groupingColumnArray}
               filterColumn={filterColumn}
@@ -347,7 +289,7 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
           </div>
 
           <div className="text-sm text-gray-600 space-y-1 text-right">
-            <div><strong>{groupNames.length}</strong> group{groupNames.length !== 1 ? 's' : ''} ({filteredRecords.length} record{filteredRecords.length !== 1 ? 's' : ''})</div>
+            <div><strong>{groupNames.length}</strong> group{groupNames.length !== 1 ? 's' : ''} ({records.length} record{records.length !== 1 ? 's' : ''})</div>
             <div className="text-xs text-gray-500">💡 Drag column border to resize • 📥 Export data in multiple formats</div>
           </div>
         </div>
