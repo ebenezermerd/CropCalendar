@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import { toast } from 'sonner'
 import LoadingSpinner from './LoadingSpinner'
+import ConfirmDialog from './ConfirmDialog'
 
 export default function UploadHistory({ onSelectUpload }) {
   const [history, setHistory] = useState([])
@@ -9,6 +10,7 @@ export default function UploadHistory({ onSelectUpload }) {
   const [error, setError] = useState(null)
   const [deleting, setDeleting] = useState(false)
   const [selectedIds, setSelectedIds] = useState(new Set())
+  const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, type: null, itemId: null })
 
   const getApiUrl = () => {
     if (window.location.hostname === 'localhost') {
@@ -38,41 +40,49 @@ export default function UploadHistory({ onSelectUpload }) {
     fetchHistory()
   }, [])
 
-  const handleDelete = async (uploadId) => {
-    if (!window.confirm('Delete this upload?')) return
-    
+  const handleDeleteClick = (uploadId) => {
+    setConfirmDialog({ isOpen: true, type: 'single', itemId: uploadId })
+  }
+
+  const handleDeleteSelectedClick = () => {
+    if (selectedIds.size === 0) {
+      toast.error('No uploads selected')
+      return
+    }
+    setConfirmDialog({ isOpen: true, type: 'multiple', itemId: null })
+  }
+
+  const confirmDelete = async () => {
     try {
       setDeleting(true)
       const apiUrl = getApiUrl()
-      await axios.delete(`${apiUrl}/api/upload/${uploadId}`)
-      toast.success('Upload deleted')
+      
+      if (confirmDialog.type === 'single') {
+        const response = await axios.delete(`${apiUrl}/api/upload/${confirmDialog.itemId}`)
+        if (response.data.success) {
+          toast.success('Upload deleted')
+        }
+      } else if (confirmDialog.type === 'multiple') {
+        const response = await axios.post(`${apiUrl}/api/delete-uploads`, { 
+          ids: Array.from(selectedIds) 
+        })
+        if (response.data.success) {
+          toast.success(`Deleted ${selectedIds.size} upload(s)`)
+        }
+      }
+      
+      setConfirmDialog({ isOpen: false, type: null, itemId: null })
       fetchHistory()
     } catch (err) {
-      toast.error('Failed to delete upload')
+      console.error('Delete error:', err)
+      toast.error(err.response?.data?.detail || 'Failed to delete upload')
     } finally {
       setDeleting(false)
     }
   }
 
-  const handleDeleteSelected = async () => {
-    if (selectedIds.size === 0) {
-      toast.error('No uploads selected')
-      return
-    }
-    
-    if (!window.confirm(`Delete ${selectedIds.size} upload(s)?`)) return
-    
-    try {
-      setDeleting(true)
-      const apiUrl = getApiUrl()
-      await axios.post(`${apiUrl}/api/delete-uploads`, { ids: Array.from(selectedIds) })
-      toast.success(`Deleted ${selectedIds.size} upload(s)`)
-      fetchHistory()
-    } catch (err) {
-      toast.error('Failed to delete uploads')
-    } finally {
-      setDeleting(false)
-    }
+  const cancelDelete = () => {
+    setConfirmDialog({ isOpen: false, type: null, itemId: null })
   }
 
   const toggleSelect = (uploadId) => {
@@ -119,11 +129,11 @@ export default function UploadHistory({ onSelectUpload }) {
         </div>
         {selectedIds.size > 0 && (
           <button
-            onClick={handleDeleteSelected}
+            onClick={handleDeleteSelectedClick}
             disabled={deleting}
             className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium disabled:opacity-50 text-sm"
           >
-            🗑️ Delete {selectedIds.size} ({deleting ? 'deleting...' : 'ready'})
+            🗑️ Delete {selectedIds.size}
           </button>
         )}
       </div>
@@ -180,7 +190,7 @@ export default function UploadHistory({ onSelectUpload }) {
                     Load
                   </button>
                   <button
-                    onClick={() => handleDelete(item.upload_id)}
+                    onClick={() => handleDeleteClick(item.upload_id)}
                     disabled={deleting}
                     className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 transition font-medium disabled:opacity-50 inline-block"
                   >
@@ -192,6 +202,20 @@ export default function UploadHistory({ onSelectUpload }) {
           </tbody>
         </table>
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.type === 'single' ? 'Delete Upload' : 'Delete Multiple Uploads'}
+        message={confirmDialog.type === 'single' 
+          ? 'This will permanently delete the upload and all associated data.'
+          : `Delete ${selectedIds.size} upload(s)? This action cannot be undone.`
+        }
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+        isLoading={deleting}
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
     </div>
   )
 }
