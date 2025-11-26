@@ -1,12 +1,23 @@
 import React, { useState } from 'react'
+import axios from 'axios'
 import FileUpload from '../components/FileUpload'
 import UploadStatus from '../components/UploadStatus'
 import PreviewTable from '../components/PreviewTable'
+import UploadHistory from '../components/UploadHistory'
 
 export default function UploadPage({ onUploadComplete, onColumnMappingStart }) {
   const [uploadData, setUploadData] = useState(null)
   const [error, setError] = useState(null)
   const [showPreview, setShowPreview] = useState(false)
+
+  const getApiUrl = () => {
+    if (window.location.hostname === 'localhost') {
+      return 'http://localhost:8000'
+    }
+    const protocol = window.location.protocol
+    const host = window.location.hostname
+    return `${protocol}//${host}:8000`
+  }
 
   const handleUploadComplete = (data) => {
     setUploadData(data)
@@ -25,6 +36,40 @@ export default function UploadPage({ onUploadComplete, onColumnMappingStart }) {
     setUploadData(null)
     setError(null)
     setShowPreview(false)
+  }
+
+  const handleSelectFromHistory = async (uploadId, historyItem) => {
+    try {
+      const apiUrl = getApiUrl()
+      const response = await axios.get(`${apiUrl}/api/upload/${uploadId}`)
+      const uploadInfo = response.data
+      
+      // Load the upload data from history
+      setUploadData({
+        success: true,
+        upload_id: uploadId,
+        filename: uploadInfo.filename,
+        file_type: uploadInfo.file_type,
+        total_rows: uploadInfo.total_rows,
+        columns: uploadInfo.columns,
+        preview_rows: [],
+        detected_columns: {}
+      })
+      setError(null)
+      setShowPreview(true)
+      onUploadComplete({
+        success: true,
+        upload_id: uploadId,
+        filename: uploadInfo.filename,
+        file_type: uploadInfo.file_type,
+        total_rows: uploadInfo.total_rows,
+        columns: uploadInfo.columns,
+        preview_rows: [],
+        detected_columns: {}
+      })
+    } catch (err) {
+      setError('Failed to load historical upload')
+    }
   }
 
   const handleNext = () => {
@@ -67,15 +112,18 @@ export default function UploadPage({ onUploadComplete, onColumnMappingStart }) {
 
         {/* Upload Section */}
         {!showPreview ? (
-          <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">
-              Upload Your Data
-            </h2>
-            <FileUpload
-              onUploadComplete={handleUploadComplete}
-              onError={handleError}
-            />
-          </div>
+          <>
+            <UploadHistory onSelectUpload={handleSelectFromHistory} />
+            <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
+              <h2 className="text-2xl font-bold text-gray-900 mb-6">
+                📤 Upload Your Data
+              </h2>
+              <FileUpload
+                onUploadComplete={handleUploadComplete}
+                onError={handleError}
+              />
+            </div>
+          </>
         ) : (
           <>
             {/* Upload Status */}

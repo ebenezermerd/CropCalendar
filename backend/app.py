@@ -1038,6 +1038,38 @@ def apply_filter(upload_id: str, filter_req: FilterRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/upload-history")
+def get_upload_history(limit: int = 20):
+    """Get list of recent uploads for history view"""
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        c.execute("""SELECT upload_id, filename, file_type, total_rows, created_at, status
+                    FROM uploads 
+                    ORDER BY created_at DESC 
+                    LIMIT ?""", (limit,))
+        rows = c.fetchall()
+        conn.close()
+        
+        history = []
+        for row in rows:
+            history.append({
+                "upload_id": row[0],
+                "filename": row[1],
+                "file_type": row[2],
+                "total_rows": row[3],
+                "created_at": row[4],
+                "status": row[5]
+            })
+        
+        return {
+            "success": True,
+            "history": history,
+            "total": len(history)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 if __name__ == "__main__":
     import uvicorn
