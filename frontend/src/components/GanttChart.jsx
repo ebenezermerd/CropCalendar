@@ -15,7 +15,7 @@ function extractMonthRanges(mask) {
   let inRange = false
   let rangeStart = -1
 
-  // First pass: collect all continuous ranges
+  // Collect all continuous ranges within 12-month cycle
   for (let i = 0; i < 12; i++) {
     const hasMonth = (mask >> i) & 1
     
@@ -23,29 +23,33 @@ function extractMonthRanges(mask) {
       inRange = true
       rangeStart = i
     } else if (!hasMonth && inRange) {
-      ranges.push({ start: rangeStart, end: i - 1, wrapsYear: false })
+      ranges.push({ start: rangeStart, end: i - 1 })
       inRange = false
     }
   }
 
-  // Handle case where range extends to end of year
+  // Handle final range that extends to December
   if (inRange) {
-    ranges.push({ start: rangeStart, end: 11, wrapsYear: false })
+    ranges.push({ start: rangeStart, end: 11 })
   }
 
-  // Check for year-wrapping: ONLY if a range ends at month 11 (extends through Dec) AND Jan (bit 0) is set
-  // This correctly identifies Oct-Mar wrap but NOT Jan-Mar + Oct-Oct as separate seasons
-  if ((mask & 1) && ranges.length > 0 && ranges[ranges.length - 1].end === 11) {
-    // Find the Jan-based range (should be at start)
+  // Check for year-wrap: Dec-Jan connection (last range ends at 11 AND first bit is set)
+  // This indicates Dec continues into next year's Jan
+  if ((mask & 1) && ranges.length > 0 && ranges[ranges.length - 1].end === 11 && ranges[0].start === 0) {
+    // Find where Jan ends
     let janEnd = 0
     for (let i = 1; i < 12; i++) {
       if ((mask >> i) & 1) janEnd = i
       else break
     }
     
-    // Mark the last range (from latter half of year) as wrapping to next year
-    ranges[ranges.length - 1].wrapsYear = true
-    ranges[ranges.length - 1].wrappedEnd = janEnd
+    // Only mark as wrap if Jan range and last range are the ONLY two ranges or adjacent
+    // This avoids false wraps from multiple independent seasons
+    if (ranges.length === 2 && ranges[0].start === 0 && ranges[1].end === 11) {
+      ranges[1].isWrapped = true
+      ranges[1].wrappedEnd = janEnd
+      ranges.pop() // Remove Jan range from display (will be rendered as part of wrap)
+    }
   }
 
   return ranges
@@ -71,19 +75,17 @@ function getColorForGroup(index) {
 
 // Calculate the maximum month span needed across all records
 function calculateMaxMonthSpan(records) {
-  let maxMonthsNeeded = 12  // At minimum, show 12 months
+  let maxMonthsNeeded = 12  // Default to 12-month view
   
   records.forEach(record => {
     if (record.month_mask) {
       const ranges = extractMonthRanges(record.month_mask)
       
-      // Check each range to find the maximum span
+      // Only extend to 24 months if there's an actual year-wrap
       ranges.forEach(range => {
-        if (range.wrapsYear && range.wrappedEnd !== undefined) {
-          // This range wraps to next year (e.g., Oct-Mar)
-          // Range: e.g., Oct(9) to Dec(11) wrapped to Jan(0) to Mar(2)
-          // Months needed in 24-month system: 
-          // From month 9 to month 12+2 = need 15 slots (0-14)
+        if (range.isWrapped && range.wrappedEnd !== undefined) {
+          // This is a year-wrapping range (e.g., Oct-Mar)
+          // Needs enough space to show Oct→Dec then Jan→Mar
           const monthsSpanned = 12 + range.wrappedEnd + 1
           maxMonthsNeeded = Math.max(maxMonthsNeeded, monthsSpanned)
         }
@@ -91,7 +93,6 @@ function calculateMaxMonthSpan(records) {
     }
   })
   
-  // Minimum 12 months, maximum 24
   return Math.min(maxMonthsNeeded, 24)
 }
 
@@ -409,7 +410,7 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
                           const allRanges = extractMonthRanges(record.month_mask)
                           
                           return allRanges.map((range, renderIdx) => {
-                            if (range.wrapsYear && range.wrappedEnd !== undefined) {
+                            if (range.isWrapped && range.wrappedEnd !== undefined) {
                               // Year-wrapping range: Oct-Mar becomes Oct(9) to Dec(11) then Jan(0) to Mar(2)
                               // In 24-month view: positions 9-14 (9,10,11 from year 1, then 12,13,14 for Jan,Feb,Mar of year 2)
                               const barStart = range.start
