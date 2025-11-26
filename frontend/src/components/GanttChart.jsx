@@ -33,9 +33,9 @@ function extractMonthRanges(mask) {
     ranges.push({ start: rangeStart, end: 11 })
   }
 
-  // Check for year-wrap: Dec-Jan connection (last range ends at 11 AND first bit is set)
+  // Check for year-wrap: ONLY Dec-Jan wrapping (last range ends at 11 AND first bit is set AND first range starts at 0)
   // This indicates Dec continues into next year's Jan
-  if ((mask & 1) && ranges.length === 2 && ranges[0].start === 0 && ranges[ranges.length - 1].end === 11) {
+  if (ranges.length >= 2 && ranges[ranges.length - 1].end === 11 && (mask & 1) && ranges[0].start === 0) {
     // Find where Jan ends
     let janEnd = 0
     for (let i = 1; i < 12; i++) {
@@ -43,12 +43,18 @@ function extractMonthRanges(mask) {
       else break
     }
     
-    // Mark the last range (Dec-based) as wrapped, pointing to where Jan ends
-    ranges[ranges.length - 1].isWrapped = true
-    ranges[ranges.length - 1].wrappedEnd = janEnd
+    // Only treat as wrapped if Jan is consecutive (no gap from bit 0)
+    const lastRangeStart = ranges[ranges.length - 1].start
     
-    // Remove the Jan range (ranges[0]) since it will be rendered as part of the wrap
-    ranges.shift()
+    // Year-wrap only if: last range starts in Oct-Dec AND first range is Jan AND no gap
+    if (lastRangeStart >= 9) { // Oct=9, Nov=10, Dec=11
+      // Mark the last range (Dec-based) as wrapped, pointing to where Jan ends
+      ranges[ranges.length - 1].isWrapped = true
+      ranges[ranges.length - 1].wrappedEnd = janEnd
+      
+      // Remove the Jan range (ranges[0]) since it will be rendered as part of the wrap
+      ranges.shift()
+    }
   }
 
   return ranges
