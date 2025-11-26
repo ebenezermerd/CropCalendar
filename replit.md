@@ -1,7 +1,7 @@
 # Crop Calendar Gantt Export Tool
 
 ### Overview
-The Crop Calendar Gantt Export Tool is a professional-grade application designed to process agricultural data, visualize crop seasonality, and prepare it for export. It streamlines the workflow from raw file upload to interactive Gantt chart visualization, focusing on robust data parsing, intelligent column mapping, and flexible filtering. The tool aims to provide a clear, interactive overview of crop planting, growing, and harvesting periods, enabling detailed analysis and future export capabilities.
+The Crop Calendar Gantt Export Tool is a professional-grade application designed to process agricultural data, visualize crop seasonality, and prepare it for export. It streamlines the workflow from raw file upload to interactive Gantt chart visualization, focusing on robust data parsing, intelligent column mapping, and flexible filtering. The tool aims to provide a clear, interactive overview of crop harvesting periods, enabling detailed analysis and future export capabilities.
 
 ### User Preferences
 No explicit user preferences were provided in the original `replit.md` file.
@@ -24,7 +24,7 @@ The application follows a client-server architecture.
     - **Resizable columns**: Drag column borders to adjust month widths dynamically
     - **Multi-column grouping**: Users can select multiple columns to create hierarchical groupings (Country + Period + Crop)
     - **CropProcess sorting**: Dropdown to group by Planting → Growing → Harvesting sequence
-    - **CropProcess filtering**: Three convenient filter buttons to show all processes, sowing only, or harvesting only
+    - **Harvesting filter**: Button to show only harvesting records (system focused on harvesting operations)
     - **Visual rectangles**: Generated from month masks with color-coding and year-end wrapping
     - **Date range tooltips**: Hover shows actual dates (e.g., "Jan 02 - Feb 26")
     - **Inline editing**: Click bars to edit month masks
@@ -66,40 +66,35 @@ The application follows a client-server architecture.
     - `Openpyxl`: Library for reading/writing Excel files.
     - `SQLModel`: Library for interacting with SQL databases.
 
-### Recent Changes (Session 8 - Crop Process Filtering)
-**Session 8 - Crop Process Filter Buttons:**
+### Recent Changes (Session 9 - Harvesting-Only Focus)
+**Session 9 - Simplified Crop Process Filtering:**
 
-**Major Feature Implemented:**
+**Major Update:**
+1. **Removed Sowing Filter - System Now Harvesting-Focused**:
+   - ✅ Removed "🌱 Sowing Only" button entirely
+   - ✅ System now focuses exclusively on harvesting operations
+   - ✅ Two filter buttons remain:
+     - **📊 All** - Shows all records
+     - **🌾 Harvesting Only** - Filters to show only harvesting records
+   - ✅ Cleaner UI, simplified workflow
 
-1. **Crop Process Filter Buttons - Created**:
-   - ✅ Three new filter buttons added to Gantt visualization controls:
-     - **📊 All Processes** - Shows all crop processes (default)
-     - **🌱 Sowing Only** - Filters to show only Sowing/Planting records
-     - **🌾 Harvesting Only** - Filters to show only Harvesting records
-   - ✅ Buttons use distinct color coding for easy identification (purple, green, amber)
-   - ✅ Only one filter can be active at a time
-   - ✅ Active filter displays with highlighted background color
+**Technical Changes:**
+- Removed sowing filter logic from `filteredRecords` useMemo
+- Updated state comment to reflect only 'all' and 'harvesting' options
+- Simplified UI with two-button filter control
+- All export and visualization features work with harvesting-focused data
 
-**Technical Implementation Details:**
-- **State Management**: Added `cropProcessFilter` state with 'all', 'sowing', 'harvesting' options
-- **Filter Logic**: Created `filteredRecords` useMemo that filters records based on:
-  - Sowing filter matches "sowing" OR "planting" (case-insensitive)
-  - Harvesting filter matches "harvesting" (case-insensitive)
-- **Dynamic Updates**: 
-  - Filtered records update all dependent computations (grouping, month span calculation)
-  - Record count displayed shows filtered count
-  - Export functionality automatically exports only filtered records
-- **UI Integration**: Filter buttons appear only when cropProcess column is in grouping columns
-- **Visual Feedback**: 
-  - Active filter button highlighted with colored background
-  - Record count updates to reflect filtered results
-  - Smooth transitions between filter states
+### Previous Session Work (Session 8 - Crop Process Filtering)
+- Initial implementation of crop process filter buttons
+- Added three filter options (all, sowing, harvesting)
+- Integrated filter state management and dynamic UI updates
+- Connected filters to export functionality
 
-**Previous Session Improvements:**
-- Column dividers: 2px solid borders on month columns for visual hierarchy
-- Loading animations: Integrated LoadingSpinner across all async operations
-- Fixed export text clipping by adjusting cell heights and removing overflow constraints
-- Implemented 12-bit month mask system for efficient date range handling
+### Earlier Improvements (Sessions 6-7)
+- Professional column dividers with 2px solid borders
+- Loading animations integrated throughout the app
+- Fixed export text clipping and rendering issues
+- Implemented 12-bit month mask system for efficient date handling
 
 ### Known Issues & Limitations
 None currently identified - all critical functionality is working as expected.
@@ -108,9 +103,8 @@ None currently identified - all critical functionality is working as expected.
 - ✅ Upload agricultural data file (CSV, XLSX, XLS, or XML)
 - ✅ Apply column mapping and parse data
 - ✅ Filter data by a column value (e.g., crop name)
-- ✅ In Gantt visualization, verify crop process filter buttons appear
-- ✅ Click "🌱 Sowing Only" button - should show only sowing/planting records
-- ✅ Click "🌾 Harvesting Only" button - should show only harvesting records
-- ✅ Click "📊 All Processes" button - should show all records
+- ✅ In Gantt visualization, verify harvest filter buttons appear
+- ✅ Click "🌾 Harvesting Only" - shows only harvesting records
+- ✅ Click "📊 All" - shows all records
 - ✅ Verify record count updates to reflect filtered results
 - ✅ Verify export operations export only filtered records

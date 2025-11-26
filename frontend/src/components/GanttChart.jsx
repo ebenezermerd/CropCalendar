@@ -106,7 +106,7 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
   const [isResizing, setIsResizing] = useState(false)
   const [resizeStart, setResizeStart] = useState(0)
   const [resizingType, setResizingType] = useState(null) // 'month' or 'field'
-  const [cropProcessFilter, setCropProcessFilter] = useState('all') // 'all', 'sowing', 'harvesting'
+  const [cropProcessFilter, setCropProcessFilter] = useState('all') // 'all', 'harvesting'
 
   const records = filterResults?.records || []
   const filterColumn = filterResults?.filter?.column
@@ -136,9 +136,7 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
       const cropProcess = record[cropProcessColumn]
       if (!cropProcess) return true
       
-      if (cropProcessFilter === 'sowing') {
-        return cropProcess.toLowerCase().includes('sowing') || cropProcess.toLowerCase().includes('planting')
-      } else if (cropProcessFilter === 'harvesting') {
+      if (cropProcessFilter === 'harvesting') {
         return cropProcess.toLowerCase().includes('harvesting')
       }
       return true
@@ -321,17 +319,7 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
                         : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
                     }`}
                   >
-                    📊 All Processes
-                  </button>
-                  <button
-                    onClick={() => setCropProcessFilter('sowing')}
-                    className={`px-4 py-2 rounded-lg font-medium transition ${
-                      cropProcessFilter === 'sowing'
-                        ? 'bg-green-600 text-white'
-                        : 'bg-gray-200 text-gray-900 hover:bg-gray-300'
-                    }`}
-                  >
-                    🌱 Sowing Only
+                    📊 All
                   </button>
                   <button
                     onClick={() => setCropProcessFilter('harvesting')}
