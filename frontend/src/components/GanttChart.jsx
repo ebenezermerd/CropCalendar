@@ -35,7 +35,7 @@ function extractMonthRanges(mask) {
 
   // Check for year-wrap: Dec-Jan connection (last range ends at 11 AND first bit is set)
   // This indicates Dec continues into next year's Jan
-  if ((mask & 1) && ranges.length > 0 && ranges[ranges.length - 1].end === 11 && ranges[0].start === 0) {
+  if ((mask & 1) && ranges.length === 2 && ranges[0].start === 0 && ranges[ranges.length - 1].end === 11) {
     // Find where Jan ends
     let janEnd = 0
     for (let i = 1; i < 12; i++) {
@@ -43,13 +43,12 @@ function extractMonthRanges(mask) {
       else break
     }
     
-    // Only mark as wrap if Jan range and last range are the ONLY two ranges or adjacent
-    // This avoids false wraps from multiple independent seasons
-    if (ranges.length === 2 && ranges[0].start === 0 && ranges[1].end === 11) {
-      ranges[1].isWrapped = true
-      ranges[1].wrappedEnd = janEnd
-      ranges.pop() // Remove Jan range from display (will be rendered as part of wrap)
-    }
+    // Mark the last range (Dec-based) as wrapped, pointing to where Jan ends
+    ranges[ranges.length - 1].isWrapped = true
+    ranges[ranges.length - 1].wrappedEnd = janEnd
+    
+    // Remove the Jan range (ranges[0]) since it will be rendered as part of the wrap
+    ranges.shift()
   }
 
   return ranges
