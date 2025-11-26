@@ -1047,6 +1047,93 @@ def apply_filter(upload_id: str, filter_req: FilterRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/upload/{upload_id}")
+def get_upload_details(upload_id: str):
+    """Get upload details for loading from history"""
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        c.execute(
+            "SELECT upload_id, filename, file_type, total_rows, path, columns_json FROM uploads WHERE upload_id = ?",
+            (upload_id,)
+        )
+        row = c.fetchone()
+        conn.close()
+        
+        if not row:
+            raise HTTPException(status_code=404, detail="Upload not found")
+        
+        columns_json = row[5]
+        columns = json.loads(columns_json) if columns_json else {}
+        
+        return {
+            "success": True,
+            "upload_id": row[0],
+            "filename": row[1],
+            "file_type": row[2],
+            "total_rows": row[3],
+            "path": row[4],
+            "columns": list(columns.keys()) if isinstance(columns, dict) else []
+        }
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/upload/{upload_id}")
+def delete_upload(upload_id: str):
+    """Delete a single upload and its associated data"""
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        
+        # Get file path to delete from filesystem
+        c.execute("SELECT path FROM uploads WHERE upload_id = ?", (upload_id,))
+        row = c.fetchone()
+        
+        if row and os.path.exists(row[0]):
+            os.remove(row[0])
+        
+        # Delete records and upload
+        c.execute("DELETE FROM records WHERE upload_id = ?", (upload_id,))
+        c.execute("DELETE FROM uploads WHERE upload_id = ?", (upload_id,))
+        
+        conn.commit()
+        conn.close()
+        
+        return {"success": True, "message": "Upload deleted"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/delete-uploads")
+def delete_multiple_uploads(ids: dict):
+    """Delete multiple uploads at once"""
+    try:
+        upload_ids = ids.get("ids", [])
+        if not upload_ids:
+            raise HTTPException(status_code=400, detail="No IDs provided")
+        
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        
+        # Delete files from filesystem
+        for upload_id in upload_ids:
+            c.execute("SELECT path FROM uploads WHERE upload_id = ?", (upload_id,))
+            row = c.fetchone()
+            if row and os.path.exists(row[0]):
+                os.remove(row[0])
+            
+            # Delete records and upload
+            c.execute("DELETE FROM records WHERE upload_id = ?", (upload_id,))
+            c.execute("DELETE FROM uploads WHERE upload_id = ?", (upload_id,))
+        
+        conn.commit()
+        conn.close()
+        
+        return {"success": True, "deleted": len(upload_ids)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/upload-history")
 def get_upload_history(limit: int = 20):
     """Get list of recent uploads for history view"""
