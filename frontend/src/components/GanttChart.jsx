@@ -141,7 +141,30 @@ export default function GanttChart({ filterResults, groupingColumns, onBack }) {
       }
       groups[groupKey].push({ ...record, _index: idx })
     })
-    return groups
+    
+    // Merge month masks for records with same grouping to display all seasons on one row
+    const mergedGroups = {}
+    Object.entries(groups).forEach(([groupKey, groupRecords]) => {
+      if (groupRecords.length === 1) {
+        // Single record - keep as is
+        mergedGroups[groupKey] = groupRecords
+      } else {
+        // Multiple records - merge their month masks
+        let mergedMask = 0
+        const mergedRecord = { ...groupRecords[0], _index: groupRecords[0]._index }
+        
+        groupRecords.forEach(record => {
+          if (record.month_mask) {
+            mergedMask |= record.month_mask // Bitwise OR combines all set months
+          }
+        })
+        
+        mergedRecord.month_mask = mergedMask
+        mergedGroups[groupKey] = [mergedRecord]
+      }
+    })
+    
+    return mergedGroups
   }, [records, groupingColumnArray])
 
   // Calculate dynamic month span
